@@ -35,17 +35,20 @@ training.data <- select(training, -id, -loss)
 test.data <- select(test, -id)
 
 clean.set <- function(input) {
-      n <- nrow(input)
+      
       for (i in 1:116) {
-            new.col <- rep(NA, n)
-            choices <- unique(input[,i])
+            new.col <- input[,i]
+            choices <- unique(new.col)
+            
             for (k in 1:length(choices)) {
-                  new.col[input[,i] == choices[k]] <- k
+                  
+                  new.col[new.col == choices[k]] <- k
+                  
             }
             input[,i] <- as.numeric(new.col)
       }
       
-      output <- as.matrix(input)
+      input <- input
 }
 
 training.set <- clean.set(training.data)
