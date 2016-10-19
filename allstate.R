@@ -6,59 +6,50 @@ library(ggplot2)
 library(caret)
 
 
-
-
-
-
-
 setwd("~/Projects/Kaggle/Allstate")
+set.seed(7890)
 
-train <-fread("train.csv", header = TRUE)
+training <-fread("train.csv", header = TRUE)
 test <- fread("test.csv", header = TRUE)
 sample <- data.frame(fread("sample_submission.csv", header = TRUE))
 
 #apply(train, 2, function(x) sum(is.na(x)))
 
-inTrain <- createDataPartition(train$loss, p=.7, list = FALSE)
-training <- train[inTrain,]
-validate <- train[-inTrain,]
+#separate data for training into validation and training sets
+#inTrain <- createDataPartition(train$loss, p=.7, list = FALSE)
+#training <- train[inTrain,]
+#validate <- train[-inTrain,]
 
 
-
+#create new vectors with the loss amounts and ids so they can be removed from the training set
 training.id <- training$id
-validate.id <- validate$id
+#validate.id <- validate$id
 test.id <- test$id
 
 
 training.loss <- training$loss
-validate.loss <- validate$loss
+#validate.loss <- validate$loss
 
 training.data <- select(training, -id, -loss)
-validate.data <- select(validate, -id, -loss)
+#validate.data <- select(validate, -id, -loss)
 test.data <- select(test, -id)
 
 clean.set <- function(input) {
-
+      n <- nrow(input)
       for (i in 1:116) {
-            
-            new.col <- rep(NA, nrow(input))
+            new.col <- rep(NA, n)
             choices <- unique(input[,i])
-            
             for (k in 1:length(choices)) {
-                  
                   new.col[input[,i] == choices[k]] <- k
-                  
             }
-      
             input[,i] <- as.numeric(new.col)
-      
       }
       
-      output <- input
+      output <- as.matrix(input)
 }
 
 training.set <- clean.set(training.data)
-validate.set <- clean.set(validate.data)
+#validate.set <- clean.set(validate.data)
 test.set <- clean.set(test.data)
 
 labels <- as.matrix(training.loss)
@@ -67,25 +58,25 @@ data <- xgb.DMatrix(as.matrix(training.set), label = labels)
 params <- list(
       booster="gblinear", 
       objective="reg:linear", 
-      eta=0.05, 
+      eta=0.1, 
       max_depth=6, 
-      subsample=1, 
-      colsample_bytree=0.5, 
+      subsample=.7, 
+      colsample_bytree=0.8, 
       min_child_weight=1
 )
 
+#xgb.CV <- xgb.cv(data = data, params = params, early_stopping_rounds = 20, nfolds = 3, nrounds = 3000)
 
-
-boost <- xgboost(data = data, params = params, nrounds = 100)
+boost <- xgboost(data = data, params = params, nrounds = 1000)
 
 pred.train <- predict(boost, as.matrix(training.set))
-pred.val <- predict(boost, as.matrix(validate.set))
+#pred.val <- predict(boost, as.matrix(validate.set))
 pred.test <- predict(boost, as.matrix(test.set))
 
 
-#rf <- randomForest(loss~., train.clean, ntree = 5)
+#rf <- randomForest(loss~., train, ntree = 5)
 
 
-sample$loss = exp(pred.test)
+sample$loss = pred.test
 
-write.csv(sample,'xgb.rip1.test.csv',row.names = FALSE)
+write.csv(sample,'submission.2.csv',row.names = FALSE)
