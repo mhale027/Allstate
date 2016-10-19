@@ -94,10 +94,6 @@ xgb.params <- list(
 #cm.xgb.loss.thou <- confusionMatrix(pred.xgb, train.loss.thou)
 
 
-
-
-
-
 #rfst.loss <- randomForest(y=as.factor(train.loss) , x = train, ntree = 5, importance = TRUE)
 #xgb.loss <- xgboost(data = dtrain, params = xgb.params, nrounds = 50)
 #pred.rf.loss <- predict(rfst, train)
