@@ -56,13 +56,15 @@ labels <- as.matrix(training.loss)
 data <- xgb.DMatrix(as.matrix(training.set), label = labels)
 
 params <- list(
-      booster="gblinear", 
+      #booster="gblinear", 
       objective="reg:linear", 
-      eta=0.1, 
+      eta=0.05, 
       max_depth=6, 
       subsample=.7, 
-      colsample_bytree=0.8, 
-      min_child_weight=1
+      colsample_bytree=0.7, 
+      min_child_weight=1,
+      base_score = 7,
+      num_parallel_tree = 1
 )
 
 #xgb.CV <- xgb.cv(data = data, params = params, early_stopping_rounds = 20, nfolds = 3, nrounds = 3000)
