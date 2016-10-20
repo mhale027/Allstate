@@ -4,6 +4,7 @@ library(dplyr)
 library(xgboost)
 library(ggplot2)
 library(caret)
+library(Metrics)
 
 
 setwd("~/Projects/Kaggle/Allstate")
@@ -27,7 +28,7 @@ training.id <- training$id
 test.id <- test$id
 
 
-training.loss <- training$loss
+training.loss <- log(training$loss)
 #validate.loss <- validate$loss
 
 training.data <- select(training, -id, -loss)
@@ -70,9 +71,23 @@ params <- list(
       num_parallel_tree = 1
 )
 
-#xgb.CV <- xgb.cv(data = data, params = params, early_stopping_rounds = 15, nfolds = 5, nrounds = 750)
+xg_eval_mae <- function (yhat, data) {
+      labels = getinfo(data, "label")
+      err= as.numeric(mean(abs(labels - yhat)))
+      return (list(metric = "error", value = err))
+}
 
-boost <- xgboost(data = data, params = params, nrounds = 1000)
+
+xgb.CV <- xgb.cv(data = data, 
+                 params = params, 
+                 early_stopping_rounds = 15, 
+                 nfold = 4, 
+                 nrounds = 750,
+                 feval = xg_eval_mae,
+                 maximize = FALSE
+                 )
+
+boost <- xgboost(data = data, params = params, nrounds = xgb.CV$best_iteration)
 
 pred.train <- predict(boost, as.matrix(training.set))
 #pred.val <- predict(boost, as.matrix(validate.set))
@@ -82,6 +97,19 @@ pred.test <- predict(boost, as.matrix(test.set))
 #rf <- randomForest(loss~., train, ntree = 5)
 
 
-sample$loss = pred.test
+sample$loss = exp(pred.test)
 
-write.csv(sample,'submission.2.csv',row.names = FALSE)
+write.csv(sample,'submission.10.20.2.csv',row.names = FALSE)
+
+#id     loss
+#1  4 1685.679
+#2  6 1834.864
+#3  9 7124.580
+#4 12 5947.825
+#5 15 1617.754
+#6 17 2762.761
+
+
+
+
+
