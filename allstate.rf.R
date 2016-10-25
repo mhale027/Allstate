@@ -52,13 +52,13 @@ validate <- clean.set(validate)
 testing <- clean.set(testing)
 
 training <- mutate(training, loss.thou = round(loss/2, -3)/1000)
-
-training$cat <- NA
-training$cat[training$loss < 2000] <- 0
-training$cat[training$loss >= 2000 & training$loss < 4000] <- 1
-training$cat[training$loss >= 4000 & training$loss < 10000] <- 2
-training$cat[training$loss >= 10000] <- 3
-training$cat <- as.factor(training$cat)
+# 
+# training$cat <- NA
+# training$cat[training$loss < 2000] <- 0
+# training$cat[training$loss >= 2000 & training$loss < 4000] <- 1
+# training$cat[training$loss >= 4000 & training$loss < 10000] <- 2
+# training$cat[training$loss >= 10000] <- 3
+# training$cat <- as.factor(training$cat)
 
 training.loss.thou <- training$loss.thou
 training.loss <- training$loss
