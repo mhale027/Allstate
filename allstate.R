@@ -15,8 +15,6 @@ test <- data.frame(fread("test.csv", header = TRUE))
 sample <- data.frame(fread("sample_submission.csv", header = TRUE))
 
 
-# training <- training[1:10000,]
-
 #create new vectors with the loss amounts and ids so they can be removed from the training set
 training.id <- training$id
 test.id <- test$id
@@ -60,7 +58,7 @@ params <- list(
       subsample = .7, 
       colsample_bytree = 0.7, 
       min_child_weight = 1,
-      base_score = 7,
+      base_score = 7.69,
       num_parallel_tree = 1
 )
 
@@ -75,41 +73,36 @@ xgb.CV <- xgb.cv(data = X_train,
                  params = params,
                  early_stopping_rounds = 10,
                  nfold = 4,
-                 nrounds = 750,
+                 nrounds = 50,
                  feval = xg_eval_mae,
                  maximize = FALSE
-                 )
+)
 
 nrounds <- xgb.CV$best_iteration
 
-#boost <- xgboost(data = X_train, params = params, nrounds = xgb.CV$best_iteration)
+
+train.rf <- training.set[1:1000,]
+rf <- randomForest(y=training.loss[1:1000], x=training.set[1:1000,], importance = TRUE, ntree = 5)
+imp <- varImp(rf)
+imp$var <- rownames(imp)
+imp <- c(arrange(imp, desc(Overall))$var[1:10])
+training.rf <- training.set[,imp]
+rf.2 <- randomForest(y=training.loss, x=training.rf, ntree = 5)
+pred.train.rf <- predict(rf.2, training.rf)
+training.set$pred.rf <- pred.train.rf
+
+
+test.rf <- test.set[,imp]
+pred.test.rf <- predict(rf.2, test.rf)
+test.rf$pred.rf <- pred.test.rf
 
 
 
-# 
-# pred.train <- exp(predict(boost, as.matrix(training.set)))
-# pred.val <- exp(predict(boost, as.matrix(validate.set)))
-# pred.test <- exp(predict(boost, as.matrix(test.set)))
 
 
-# rf <- randomForest(loss~., train, ntree = 5)
 
 
-# sample$loss = pred.test
-# 
-# mod <- function(data, labels, model) {
-#       data <- data.matrix(data)
-#       labels <- data.matrix(labels)
-#       pred <- predict(model, xgb.DMatrix(data, labels))
-#       
-#       
-# }
 
-rf1 <- randomForest(y=training.loss, x=training.set, ntree = 50, importance = TRUE)
-pred.rf <- predict(rf1, training.set)
-training.set$rf1 <- pred.rf
-      
-      
 X_train <- xgb.DMatrix(data = data.matrix(training.set), label = labels)
 xgb1 <- xgboost(data = X_train, params = params, max_depth = 1, nrounds = nrounds)
 pred1 <- predict(xgb1, xgb.DMatrix(data.matrix(training.set), label = training.loss))
@@ -140,7 +133,45 @@ xgb6 <- xgboost(data = X_train, params = params, max_depth = 6, nrounds = nround
 pred6 <- pred6 <- predict(xgb6, xgb.DMatrix(data.matrix(training.set), label = training.loss))
 training.set$pred6 <- pred6
 
-# write.csv(sample,'submission.10.20.2.csv',row.names = FALSE)
+
+training.rf.3 <- training.rf
+training.rf.3$pred.rf <- training.rf$pred.rf
+training.rf.3$pred1 <- training.set$pred1
+training.rf.3$pred2 <- training.set$pred2
+training.rf.3$pred3 <- training.set$pred3
+training.rf.3$pred4 <- training.set$pred4
+training.rf.3$pred5 <- training.set$pred5
+training.rf.3$pred6 <- training.set$pred6
+
+
+test.pred1 <- predict(xgb1, xgb.DMatrix(data.matrix(test.set)))
+test.pred2 <- predict(xgb2, xgb.DMatrix(data.matrix(test.set)))
+test.pred3 <- predict(xgb3, xgb.DMatrix(data.matrix(test.set)))
+test.pred4 <- predict(xgb4, xgb.DMatrix(data.matrix(test.set)))
+test.pred5 <- predict(xgb5, xgb.DMatrix(data.matrix(test.set)))
+test.pred6 <- predict(xgb6, xgb.DMatrix(data.matrix(test.set)))
+
+
+test.rf.3 <- test.rf
+test.rf.3$pred.rf <- test.rf$pred.rf
+test.rf.3$pred1 <- test.pred1
+test.rf.3$pred2 <- test.pred2
+test.rf.3$pred3 <- test.pred3
+test.rf.3$pred4 <- test.pred4
+test.rf.3$pred5 <- test.pred5
+test.rf.3$pred6 <- test.pred6
+
+
+rf.3 <- randomForest(y=training.loss, x=training.rf, ntree = 50)
+pred.train.rf.3 <- predict(rf.3, training.rf.3)
+training.set$pred.rf.3 <- pred.train.rf.3
+
+pred.test.rf.3 <- predict(rf.3, test.rf.3)
+test.rf.3$pred.rf.3 <- pred.test.rf.3
+
+sample$loss <- pred.test.rf.3
+
+write.csv(sample,'submission.10.25.csv',row.names = FALSE)
 
 #id     loss
 #1  4 1685.679
