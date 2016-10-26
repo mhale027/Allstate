@@ -9,10 +9,12 @@ library(Metrics)
 
 setwd("~/Projects/Kaggle/Allstate")
 set.seed(7890)
+source("sparse.R")
 
 training <-data.frame(fread("train.csv", header = TRUE))
 test <- data.frame(fread("test.csv", header = TRUE))
 sample <- data.frame(fread("sample_submission.csv", header = TRUE))
+
 
 
 #create new vectors with the loss amounts and ids so they can be removed from the training set
@@ -37,7 +39,7 @@ clean.set <- function(input) {
             for (k in 1:length(choices)) {
                   new.col[new.col == choices[k]] <- k
             }
-            input[,i] <- as.numeric(new.col)
+            input[,i] <- as.factor(new.col)
       }
       input <- input
 }
@@ -45,8 +47,8 @@ clean.set <- function(input) {
 training.set <- clean.set(training.data)
 test.set <- clean.set(test.data)
 
-
-
+training.set <- sparse(training.set[1:1000,])
+test.set <- sparse(test.set[1:1000,])
 
 labels <- data.matrix(training.loss)
 X_train <- xgb.DMatrix(data = data.matrix(training.set), label = labels)
@@ -73,7 +75,7 @@ xgb.CV <- xgb.cv(data = X_train,
                  params = params,
                  early_stopping_rounds = 10,
                  nfold = 4,
-                 nrounds = 50,
+                 nrounds = 750,
                  feval = xg_eval_mae,
                  maximize = FALSE
 )
@@ -81,18 +83,18 @@ xgb.CV <- xgb.cv(data = X_train,
 nrounds <- xgb.CV$best_iteration
 
 
-train.rf <- training.set[1:1000,]
-rf <- randomForest(y=training.loss[1:1000], x=training.set[1:1000,], importance = TRUE, ntree = 5)
-imp <- varImp(rf)
-imp$var <- rownames(imp)
-imp <- c(arrange(imp, desc(Overall))$var[1:10])
-training.rf <- training.set[,imp]
+#training.rf <- training.set[1:1000,]
+#rf <- randomForest(y=training.loss[1:1000], x=training.rf[1:1000,], importance = TRUE, ntree = 5)
+#imp <- varImp(rf)
+#imp$var <- rownames(imp)
+#imp <- c(arrange(imp, desc(Overall))$var[1:100])
+#training.rf <- training.set[,imp]
 rf.2 <- randomForest(y=training.loss, x=training.rf, ntree = 5)
 pred.train.rf <- predict(rf.2, training.rf)
 training.set$pred.rf <- pred.train.rf
 
 
-test.rf <- test.set[,imp]
+test.rf <- test.set
 pred.test.rf <- predict(rf.2, test.rf)
 test.rf$pred.rf <- pred.test.rf
 

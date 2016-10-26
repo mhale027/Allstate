@@ -1,9 +1,7 @@
 
-c.vars <- names(train)
-
-sparce <- function(train) {
+sparse <- function(train) {
       train <- data.table(train)
-      c.vars <- names(train)[sapply(train, is.character)]
+      c.vars <- names(train)[grep("cat", names(train))]
       for (i in 1:length(c.vars)) {
             gc()
             factors <- unique(train[[c.vars[i]]])
@@ -14,5 +12,6 @@ sparce <- function(train) {
             }
             train[,c.vars[i]:=NULL]
       }
-      train <- train
+      train <- data.frame(train)
 }
+
