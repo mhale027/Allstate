@@ -83,20 +83,27 @@ xgb.CV <- xgb.cv(data = X_train,
 nrounds <- xgb.CV$best_iteration
 
 
-#training.rf <- training.set[1:1000,]
-#rf <- randomForest(y=training.loss[1:1000], x=training.rf[1:1000,], importance = TRUE, ntree = 5)
-#imp <- varImp(rf)
-#imp$var <- rownames(imp)
-#imp <- c(arrange(imp, desc(Overall))$var[1:100])
-#training.rf <- training.set[,imp]
+training.rf <- training.set[1:1000,]
+rf <- randomForest(y=training.loss[1:1000], x=training.rf[1:1000,], importance = TRUE, ntree = 5)
+imp <- varImp(rf)
+imp$var <- rownames(imp)
+imp <- c(arrange(imp, desc(Overall))$var[1:100])
+training.rf <- training.set[,imp]
 rf.2 <- randomForest(y=training.loss, x=training.rf, ntree = 5)
+
 pred.train.rf <- predict(rf.2, training.rf)
 training.set$pred.rf <- pred.train.rf
 
+validate.rf <- validate.set[,imp]
+pred.validate.rf <- predict(rf.2, validate.rf)
+validate.set$pred.rf <- pred.validate.rf
 
-test.rf <- test.set
+
+
+
+test.rf <- test.set[,imp]
 pred.test.rf <- predict(rf.2, test.rf)
-test.rf$pred.rf <- pred.test.rf
+test.set$pred.rf <- pred.test.rf
 
 
 
@@ -110,10 +117,21 @@ xgb1 <- xgboost(data = X_train, params = params, max_depth = 1, nrounds = nround
 pred1 <- predict(xgb1, xgb.DMatrix(data.matrix(training.set), label = training.loss))
 training.set$pred1 <- pred1
 
+pred.t.1 <- predict(xgb1, xgb.DMatrix(data.matrix(test.set)))
+test.set$pred1 <- pred.t.1
+
+
+
+
 X_train <- xgb.DMatrix(data = data.matrix(training.set), label = labels)
 xgb2 <- xgboost(data = X_train, params = params, max_depth = 2, nrounds = nrounds)
 pred2 <- pred2 <- predict(xgb2, xgb.DMatrix(data.matrix(training.set), label = training.loss))
 training.set$pred2 <- pred2
+
+pred.t.2 <- predict(xgb2, xgb.DMatrix(data.matrix(test.set)))
+test.set$pred2 <- pred.t.2
+
+
 
 X_train <- xgb.DMatrix(data = data.matrix(training.set), label = labels)
 xgb3 <- xgboost(data = X_train, params = params, max_depth = 3, nrounds = nrounds)
