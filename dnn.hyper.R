@@ -91,10 +91,10 @@ dnn.2 <- h2o.deeplearning(x=x.vars,
 train.sample <- train.hex[1:10000, ]
 
 hyper_params <- list(
-      hidden = list(c(200, 200), c(150, 50), c(200, 100, 35)),
-      input_dropout_ratio = c(0, .05),
-      rate = c(.005, .01, .02),
-      rate_annealing = c(1e-8, 1e-7, 1e-6)
+      hidden = list(c(200, 100), c(150, 50), c(100, 35)),
+      input_dropout_ratio = c(0, .05, .1),
+      rate = c(.01, .005),
+      rate_annealing = c(1e-7, 5e-6, 1e-6)
 )
 
 dnn.grid <- h2o.grid(
@@ -104,19 +104,19 @@ dnn.grid <- h2o.grid(
       validation_frame = valid.hex,
       x = x.vars,
       y = response,
-      epochs = 10,
+      epochs = 1,
       stopping_metric = "MSE",
       stopping_rounds = 2,
       score_validation_samples = 10000,
       score_duty_cycle = .025,
-      adaptive_rate = FALSE,
-      momentum_start = .5,
-      momentum_stable=0.9, 
-      momentum_ramp=1e7, 
-      l1=1e-5,
-      l2=1e-5,
-      activation = c("Rectifier"),
-      max_w2 = 10,
+      # adaptive_rate = FALSE,
+      # momentum_start = .5,
+      # momentum_stable=0.9, 
+      # momentum_ramp=1e7, 
+      # l1=1e-5,
+      # l2=1e-5,
+      # activation = c("Rectifier"),
+      # max_w2 = 10,
       hyper_params = hyper_params
 )
 

@@ -41,7 +41,7 @@ cont.vars <- names(alldata)[grep("cont", names(alldata))]
 
 mean.loss <- mean(training.loss)
 
-ytrain <- data.matrix(alldata[tr,1])
+ytrain <- data.matrix(training.loss)
 xtrain <- xgb.DMatrix(data.matrix(alldata[tr,-1]), label = ytrain)
 xtest <- xgb.DMatrix(data.matrix(alldata[te,-1]))
 # test.base <- rep(7.69, test.length)
@@ -67,56 +67,47 @@ imp.vars <- var.imp$Feature
 alldata1 <- alldata[,imp.vars]
 
 
-for (k in 1:2) {
-      
+for (k in grep("cat", names(alldata))) {
       cat.vars1 <- names(alldata1)[grep("cat", names(alldata1))]
       cont.vars1 <- names(alldata1)[grep("cont", names(alldata1))]
       this.feat <- imp.vars[k]
-      
       if (this.feat %in% cat.vars1) {
-           
             other.feats <- cat.vars1[-grep(this.feat, fixed = TRUE, cat.vars1)]
-            
             for (i in 1:(length(cat.vars1)-1)) {
-                  
                   if ( "+" %in% strsplit(this.feat, split = "") == 0 ) {
                   } else {
-                  
                         alldata1[,1+ncol(alldata1)] <- alldata1[,this.feat] + alldata1[,other.feats[i]]
-                  
                         names(alldata1)[ncol(alldata1)] <- paste0(this.feat, "+", other.feats[i])
                   }
             }
-            
       } else {
-            
             other.feats <- cont.vars1[-grep(this.feat, fixed = TRUE, cont.vars1)]
-            
             for (i in 1:(length(cont.vars1)-1)) {
-                  
-                  alldata1[,1+ncol(alldata1)] <- (alldata1[,this.feat] + alldata1[,other.feats[i]])/2
-                  names(alldata1)[ncol(alldata1)] <- paste(this.feat, "+", other.feats[i])
+                  if ( "+" %in% strsplit(this.feat, split = "") == 0 ) {
+                  } else {
+                        alldata1[,1+ncol(alldata1)] <- (alldata1[,this.feat] + alldata1[,other.feats[i]])/2
+                        names(alldata1)[ncol(alldata1)] <- paste0(this.feat, "+", other.feats[i])
+                  }
             }
       }
-            
       xtrain <- xgb.DMatrix(data.matrix(alldata1[tr,]), label = ytrain)
-      
       xgb.imp <- xgboost(data = xtrain, print_every_n = 10L, nrounds = 10)
-      
       x.vars1 <- names(alldata1)
-      
       var.imp2 <- xgb.importance(model = xgb.imp, feature_names = x.vars1)
-      
       imp.vars <<- unique(var.imp2$Feature)
-      
       alldata1 <- alldata1[,imp.vars]
-      
 }
 
 xtrain <- xgb.DMatrix(data.matrix(alldata1[tr,]), label = ytrain)
 
 
-xgb.1 <- xgboost(xtrain, print_every_n = 10L, nrounds = 100, early_stopping_rounds = 5, base_score = 7.69)
+xgb.1 <- xgboost(xtrain, 
+                 print_every_n = 10L, 
+                 nrounds = 100, 
+                 # early_stopping_rounds = 5, 
+                 base_score = 7.69
+)
+
 pred.train.xgb.1 <- exp(predict(xgb.1, xtrain))
 pred.test.xgb.1 <- exp(predict(xgb.1, xtest))
 
@@ -155,34 +146,39 @@ new.cols <- grep("+", names(alldata1))
 
 alldata.feats <- cbind(alldata, alldata1[,new.cols])
 
+xtrain <- xgb.DMatrix(data.matrix(alldata.feats[tr,-1]), label = ytrain)
 
-
-xgb.2 <- xgboost(data = xgb.DMatrix(data.matrix(alldata.feats[tr,-1]), label = data.matrix(training.loss)), 
+xgb.2 <- xgboost(data = xtrain,
                  print_every_n = 10L, 
                  nrounds = 100,
-                 base_score = 7.69)
-pred.train.xgb.2 <- exp(predict(xgb.2, xgb.DMatrix(data.matrix(alldata.feats[tr,-1]), label = data.matrix(training.loss))))
-pred.test.xgb.2 <- exp(predict(xgb.2, xgb.DMatrix(data.matrix(alldata.feats[te,-1]))))
+                 base_score = 7.69
+)
 
-
+pred.train.xgb.2 <- exp(predict(xgb.2, xtrain))
+pred.test.xgb.2 <- exp(predict(xgb.2, xtest))
 
 xgb.params.3 <- list(objective = "reg:linear",
-                     booster = "gbtree",
-                     nfold = 3,
-                     max_depth = 12,
-                     eta = .01,
-                     gamma = 2.5,
-                     colsample_bytree = 1,
-                     min_child_weight = 1.3,
-                     base_score = 7.69
+                     max_depth = 6,
+                     eta = .1,
+                     nfold = 5,
+                     base_score = 7.69,
+                     # min_child_weight = 1, 
+                     subsample = .7, 
+                     colsample_bytree = .7, 
+                     # num_parallel_tree = 1,
+                     eval_metric = "mae"
 )
-xgb.3 <- xgboost(data = xgb.DMatrix(data.matrix(alldata.feats[tr,-1]), label = data.matrix(training.loss)),
-                 print_every_n = 10L, nrounds = 200,
-                 early_stopping_rounds = 10,
-                 params = xgb.params.3)
 
-pred.train.xgb.3 <- exp(predict(xgb.3, data.matrix(alldata.feats[tr,-1])))
-pred.test.xgb.3 <- exp(predict(xgb.3, data.matrix(alldata.feats[te,-1])))
+xgb.3 <- xgboost(data = xtrain,
+                 print_every_n = 10L, nrounds = 500,
+                 early_stopping_rounds = 10,
+                 params = xgb.params.3
+                 # booster = "gblinear",
+                 # objective = "reg:linear"
+)
+
+pred.train.xgb.3 <- exp(predict(xgb.3, xtrain))
+pred.test.xgb.3 <- exp(predict(xgb.3, xtest))
 
 head(exp(training.loss))
 head(pred.train.xgb.1)
@@ -193,6 +189,24 @@ head(pred.test.xgb.2)
 head(pred.test.xgb.3)
 
 
+############gbtree###############
+# > head(exp(training.loss))
+# [1] 2213.18 1283.60 3005.09  939.85 2763.85 5142.87
+# > head(pred.train.xgb.1)
+# [1] 2008.319 1703.520 4645.893 1027.234 3085.820 3853.907
+# > head(pred.train.xgb.2)
+# [1] 2026.745 1582.359 4197.879 1069.497 2982.383 4127.480
+# > head(pred.train.xgb.3)
+# [1] 2045.790 1699.724 3629.339 1248.771 3031.542 4233.112
+# > head(pred.test.xgb.1)
+# [1] 5012.134 8653.776 5015.730 1327.028 1424.418 6551.810
+# > head(pred.test.xgb.2)
+# [1] 1600.5289 2218.1783 5796.2343 5864.4857  856.8963 2510.0029
+# > head(pred.test.xgb.3)
+# [1] 1665.270 1975.686 4653.520 4969.422  997.977 2071.099
+#################################
+
+###########gblinear##############
 
 
 
