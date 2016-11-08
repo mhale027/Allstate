@@ -103,7 +103,7 @@ feat.1[tr] <- ifelse(training.loss > mean.loss, 1, 0)
 for (i in tr) {
       if (z.score[i] < -.5) {
             feat.2[i] <- 1
-      } else if (z.score[i] < .02) {
+      } else if (z.score[i] < -.02) {
             feat.2[i] <- 2
       } else {
             feat.2[i] <- 3
@@ -208,18 +208,27 @@ feats <- cbind(feat.1, feat.2, feat.3, feat.4, feat.5, feat.6)
 # feats <- sparse.frame(feats)
 feats <- cbind(feats, feat.z)
 
-alldata <- cbind(alldata, feats)
+# alldata <- cbind(alldata, feats)
 
-levels(alldata$feat.1) <- make.names(levels(alldata$feat.1), unique = TRUE)
-levels(alldata$feat.2) <- make.names(levels(alldata$feat.2), unique = TRUE)
-levels(alldata$feat.3) <- make.names(levels(alldata$feat.3), unique = TRUE)
-levels(alldata$feat.4) <- make.names(levels(alldata$feat.4), unique = TRUE)
-levels(alldata$feat.5) <- make.names(levels(alldata$feat.5), unique = TRUE)
-levels(alldata$feat.6) <- make.names(levels(alldata$feat.6), unique = TRUE)
+levels(feat.1$feat.1) <- make.names(levels(feat.1$feat.1), unique = TRUE)
+levels(feat.2$feat.2) <- make.names(levels(feat.2$feat.2), unique = TRUE)
+levels(feat.3$feat.3) <- make.names(levels(feat.3$feat.3), unique = TRUE)
+levels(feat.4$feat.4) <- make.names(levels(feat.4$feat.4), unique = TRUE)
+levels(feat.5$feat.5) <- make.names(levels(feat.5$feat.5), unique = TRUE)
+levels(feat.6$feat.6) <- make.names(levels(feat.6$feat.6), unique = TRUE)
 
 save(alldata, file = "template.RData")
-save(nzv.t, file = "nzv.t.RData")
+# save(nzv.t, file = "nzv.t.RData")
 
+
+
+
+
+#################################################################
+##################################################################
+####################       feature guess 1        ###############
+################################################################
+###############################################################
 
 # Fitting 
 # nrounds = 10, 
@@ -229,20 +238,11 @@ save(nzv.t, file = "nzv.t.RData")
 # colsample_bytree = 0.7, 
 # min_child_weight = 2
 
+ytrain <- as.numeric(factor(feat.1[tr,]))-1
+xtrain <- xgb.DMatrix(data.matrix(alldata[tr,-1]), label = ytrain[tr])
+xtest <- xgb.DMatrix(data.matrix(alldata[te,-1]))
 
-
-
-
-ytrain <- as.numeric(factor(alldata$feat.1[tr]))-1
-xtrain <- xgb.DMatrix(data.matrix(alldata[tr,-c(1,141)]), label = ytrain[tr])
-xtest <- xgb.DMatrix(data.matrix(alldata[te,-c(1,141)]))
-
-
-
-
-
-
-xgb.grid <- expand.grid(
+xgb.grid.1 <- expand.grid(
       nrounds = 10,
       eta = 0.1,
       max_depth = c(8, 10, 12, 14),
@@ -251,7 +251,76 @@ xgb.grid <- expand.grid(
       min_child_weight = c(0, 1, 2)
 )
 
-xgb.train.control <- trainControl(
+xgb.train.control.1 <- trainControl(
+      method = "cv",
+      number = 4,
+      verboseIter = TRUE,
+      returnData = FALSE,
+      returnResamp = "all",
+      summaryFunction = twoClassSummary,
+      classProbs = TRUE,
+      allowParallel = TRUE
+)
+
+
+xgb.prep.1 <- train(x = alldata[1:1000,-1],
+                  y=feat.1[1:1000,],
+                  trControl = xgb.train.control.1,
+                  tuneGrid = xgb.grid.1,
+                  method = "xgbTree",
+                  metric = "ROC"
+                  
+)
+
+
+
+xgb.1.max_depth <- xgb.prep.1$bestTune$max_depth
+xgb.1.gamma <- xgb.prep.1$bestTune$gamma
+xgb.1.colsample_bytree <- xgb.prep.1$bestTune$colsample_bytree
+xgb.1.min_child_weight <- xgb.prep.1$bestTune$min_child_weight
+
+xgb.1.params <- list(
+      objective = "binary:logistic",
+      eta = 0.2,
+      max_depth = xgb.1.max_depth, 
+      gamma = xgb.1.gamma,
+      colsample_bytree = xgb.1.colsample_bytree,
+      min_child_weight = xgb.1.min_child_weight,
+      metric = "ROC"
+)
+
+res.1 <- xgb.cv(data = xtrain,
+                nrounds = 500,
+                nfold = 4,
+                params = xgb.1.params,
+                early_stopping_rounds = 10,
+                print_every_n = 10
+)
+
+nrounds.1 <- res.1$best_iteration     
+
+xgb.1 <- xgboost(xtrain, params = xgb.1.params,
+                 nfold = 4, 
+                 nrounds = nrounds.1, 
+                 early_stopping_rounds = 10)
+
+pred.train.xgb.1 <- as.numeric(predict(xgb.1, xtrain) > .5)
+pred.test.xgb.1 <- as.numeric(predict(xgb.1, xtest) > .5)
+
+# table(pred.train.xgb.1, feat.1[tr,])   pred.train.xgb.1     X0     X1
+                                                        # 0 116489  16705
+                                                        # 1   7390  47734
+
+xgb.grid.2 <- expand.grid(
+      nrounds = 10,
+      eta = 0.05,
+      max_depth = c(9, 10, 11, 12),
+      gamma = c(2, 3, 4),
+      colsample_bytree = c(0.7, 0.75, .8),
+      min_child_weight = 1
+)
+
+xgb.train.control.2 <- trainControl(
       method = "cv",
       number = 4,
       verboseIter = TRUE,
@@ -263,10 +332,10 @@ xgb.train.control <- trainControl(
 )
 
 
-xgb.prep <- train(x = alldata[1:1000,-c(1,141)],
-                  y=factor(feat.1),
-                  trControl = xgb.train.control,
-                  tuneGrid = xgb.grid,
+xgb.prep.2 <- train(x = alldata[1:1000,-1],
+                  y=feat.1[1:1000,],
+                  trControl = xgb.train.control.2,
+                  tuneGrid = xgb.grid.2,
                   method = "xgbTree",
                   metric = "ROC"
                   
@@ -274,73 +343,298 @@ xgb.prep <- train(x = alldata[1:1000,-c(1,141)],
 
 
 
-xgb.1.max_depth <- xgb.prep$bestTune$max_depth
-xgb.1.gamma <- xgb.prep$bestTune$gamma
-xgb.1.colsample_bytree <- xgb.prep$bestTune$colsample_bytree
-xgb.1.min_child_weight <- xgb.prep$bestTune$min_child_weight
+xgb.2.max_depth <- xgb.prep.2$bestTune$max_depth
+xgb.2.gamma <- xgb.prep.2$bestTune$gamma
+xgb.2.colsample_bytree <- xgb.prep.2$bestTune$colsample_bytree
+xgb.2.min_child_weight <- xgb.prep.2$bestTune$min_child_weight
 
-xgb.1.params <- list(
+xgb.2.params <- list(
       objective = "binary:logistic",
       # num_class = 2,
+      eta = 0.05,
+      max_depth = xgb.2.max_depth, 
+      gamma = xgb.2.gamma,
+      colsample_bytree = xgb.2.colsample_bytree,
+      min_child_weight = xgb.2.min_child_weight,
+      metric = "ROC"
+)
+
+
+res.2 <- xgb.cv(data = xtrain,
+                nrounds = 1000,
+                nfold = 4,
+                params = xgb.2.params,
+                early_stopping_rounds = 10,
+                print_every_n = 10
+)
+
+nrounds.2 <- res.2$best_iteration  
+
+xgb.2 <- xgboost(xtrain, nrounds = nrounds.2,
+                 params = xgb.2.params,
+                 early_stopping_rounds = 5,
+                 nfold = 4
+)
+
+pred.train.xgb.2 <- as.numeric(predict(xgb.2, xtrain) > .5)
+pred.test.xgb.2 <- as.numeric(predict(xgb.2, xtest) > .5)
+
+#no ptrain
+# table(pred.train.xgb.2, feat.1)   X0     X1
+                               # 0 117857  15791
+                               # 1   6022  48648
+
+f.1 <- data.frame(f.1 = c(pred.train.xgb.2, pred.test.xgb.2))
+save(f.1, file = "feature.1.RData")
+alldata <- cbind(alldata, f.1)
+
+
+#################################################################
+##################################################################
+####################       feature guess 2        ###############
+################################################################
+###############################################################
+
+# Fitting 
+# nrounds = 10, 
+# max_depth = 10, 
+# eta = 0.1, 
+# gamma = 5, 
+# colsample_bytree = 0.7, 
+# min_child_weight = 2
+
+ytrain <- as.numeric(factor(feat.2[tr,]))-1
+xtrain <- xgb.DMatrix(data.matrix(alldata[tr,-1]), label = ytrain[tr])
+xtest <- xgb.DMatrix(data.matrix(alldata[te,-1]))
+
+xgb.grid.1 <- expand.grid(
+      nrounds = 10,
+      eta = 0.1,
+      max_depth = c(8, 10, 12, 14),
+      gamma = c(0, 3, 5),
+      colsample_bytree = c(0.7, 0.85, 1.0),
+      min_child_weight = c(0, 1, 2)
+)
+
+xgb.train.control.1 <- trainControl(
+      method = "cv",
+      number = 4,
+      verboseIter = TRUE,
+      returnData = FALSE,
+      returnResamp = "all",
+      classProbs = TRUE,
+      allowParallel = TRUE
+)
+
+
+xgb.prep.1 <- train(x = alldata[1:1000,-1],
+                    y=feat.2[1:1000,],
+                    trControl = xgb.train.control.1,
+                    tuneGrid = xgb.grid.1,
+                    method = "xgbTree",
+                    metric = "Accuracy"
+                    
+)
+
+
+
+xgb.1.max_depth <- xgb.prep.1$bestTune$max_depth
+xgb.1.gamma <- xgb.prep.1$bestTune$gamma
+xgb.1.colsample_bytree <- xgb.prep.1$bestTune$colsample_bytree
+xgb.1.min_child_weight <- xgb.prep.1$bestTune$min_child_weight
+
+xgb.1.params <- list(
+      objective = "multi:softmax",
+      num_class = 3,
       eta = 0.2,
       max_depth = xgb.1.max_depth, 
-      gamma = xgb.prep$bestTune$gamma,
-      colsample_bytree = xgb.prep$bestTune$colsample_bytree,
-      min_child_weight = xgb.prep$bestTune$min_child_weight,
-      metric = "mlogloss"
+      gamma = xgb.1.gamma,
+      colsample_bytree = xgb.1.colsample_bytree,
+      min_child_weight = xgb.1.min_child_weight,
+      metric = "Accuracy"
 )
 
 res.1 <- xgb.cv(data = xtrain,
-                nrounds = 10,
+                nrounds = 500,
                 nfold = 4,
                 params = xgb.1.params,
                 early_stopping_rounds = 10,
                 print_every_n = 10
 )
-nrounds.1 <- res.1$best_iteration                
-xgb.1 <- xgboost(xtrain, params = xgb.1.params, nfold = 4, nrounds = nrounds.1, early_stopping_rounds = 10)
 
-pred.train.xgb.1 <- as.numeric(predict(xgb.1, xtrain) > .5)
-pred.test.xgb.1 <- as.numeric(predict(xgb.1, xtest) > .5)
+nrounds.1 <- res.1$best_iteration     
 
+xgb.1 <- xgboost(xtrain, params = xgb.1.params,
+                 nfold = 4, 
+                 nrounds = nrounds.1, 
+                 early_stopping_rounds = 10)
 
+pred.train.xgb.1 <- predict(xgb.1, xtrain)
+pred.test.xgb.1 <- predict(xgb.1, xtest)
 
+# table(pred.train.xgb.1, feat.1[tr,])   pred.train.xgb.1     X0     X1
+# 0 116489  16705
+# 1   7390  47734
 
+xgb.grid.2 <- expand.grid(
+      nrounds = 10,
+      eta = 0.05,
+      max_depth = c(9, 10, 11, 12),
+      gamma = c(2, 3, 4),
+      colsample_bytree = c(0.7, 0.75, .8),
+      min_child_weight = 1
+)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ytrain <- as.numeric(factor(feat.2[tr,]))-1
-xtrain <- xgb.DMatrix(data.matrix(alldata[tr,-c(1,142)]), label = ytrain)
-xtest <- xgb.DMatrix(data.matrix(alldata[te,-c(1,142)]))
-
-
-xgb.2 <- xgboost(xtrain, nrounds = 200,
-                 max_depth = 6, 
-                 gamma = 5,
-                 colsample_bytree = .7,
-                 min_child_weight = 2,
-                 eta = .05,
-                 early_stopping_rounds = 5,
-                 objective = "multi:softmax",
-                 num_class = 3
-                 
+xgb.train.control.2 <- trainControl(
+      method = "cv",
+      number = 4,
+      verboseIter = TRUE,
+      returnData = FALSE,
+      returnResamp = "all",
+      classProbs = TRUE,
+      summaryFunction = twoClassSummary,
+      allowParallel = TRUE
 )
 
 
+xgb.prep.2 <- train(x = alldata[1:1000,-1],
+                    y=feat.1[1:1000,],
+                    trControl = xgb.train.control.2,
+                    tuneGrid = xgb.grid.2,
+                    method = "xgbTree",
+                    metric = "Accuracy"
+                    
+)
+
+
+
+xgb.2.max_depth <- xgb.prep.2$bestTune$max_depth
+xgb.2.gamma <- xgb.prep.2$bestTune$gamma
+xgb.2.colsample_bytree <- xgb.prep.2$bestTune$colsample_bytree
+xgb.2.min_child_weight <- xgb.prep.2$bestTune$min_child_weight
+
+xgb.2.params <- list(
+      objective = "binary:logistic",
+      # num_class = 2,
+      eta = 0.05,
+      max_depth = xgb.2.max_depth, 
+      gamma = xgb.2.gamma,
+      colsample_bytree = xgb.2.colsample_bytree,
+      min_child_weight = xgb.2.min_child_weight,
+      metric = "mlogloss"
+)
+
+
+res.2 <- xgb.cv(data = xtrain,
+                nrounds = 1000,
+                nfold = 4,
+                params = xgb.2.params,
+                early_stopping_rounds = 10,
+                print_every_n = 10
+)
+
+nrounds.2 <- res.2$best_iteration  
+
+xgb.2 <- xgboost(xtrain, nrounds = nrounds.2,
+                 params = xgb.2.params,
+                 early_stopping_rounds = 5,
+                 nfold = 4
+)
+
+pred.train.xgb.2 <- predict(xgb.2, xtrain)
+pred.test.xgb.2 <- predict(xgb.2, xtest)
+
+# table(as.numeric(factor(feat.2$feat.2[tr])), pred)    ### no f.1 in alldata ###
+# pred
+# 1     2     3
+# 1 56393  8530  4326
+# 2 18382 23540 11236
+# 3  6135  7810 51966
+f.2 <- data.frame(f.2 = c(pred.train.xgb.2, pred.test.xgb.2))
+save(f.2, file = "feature.2.RData")
+
+##############################  END  ###############################
+
+
+
+
+
+
+
+ptrain <- predict(xgb.1, xtrain, outputmargin = TRUE)
+ptest <- predict(xgb.1, xtrain, outputmargin = TRUE)
+
+setinfo(xtrain, "base_margin", ptrain)
+setinfo(xtest, "base_margin", ptest)
+
+# 1   7390  47734
+
+xgb.grid.2 <- expand.grid(
+      nrounds = 10,
+      eta = 0.05,
+      max_depth = c(9, 10, 11, 12),
+      gamma = c(2, 3, 4),
+      colsample_bytree = c(0.7, 0.75, .8),
+      min_child_weight = 1
+)
+
+xgb.train.control.2 <- trainControl(
+      method = "cv",
+      number = 4,
+      verboseIter = TRUE,
+      returnData = FALSE,
+      returnResamp = "all",
+      classProbs = TRUE,
+      summaryFunction = twoClassSummary,
+      allowParallel = TRUE
+)
+
+
+xgb.prep.2 <- train(x = alldata[1:1000,-1],
+                    y=feat.1[1:1000,],
+                    trControl = xgb.train.control.2,
+                    tuneGrid = xgb.grid.2,
+                    method = "xgbTree",
+                    metric = "ROC"
+                    
+)
+
+
+
+xgb.2.max_depth <- xgb.prep.2$bestTune$max_depth
+xgb.2.gamma <- xgb.prep.2$bestTune$gamma
+xgb.2.colsample_bytree <- xgb.prep.2$bestTune$colsample_bytree
+xgb.2.min_child_weight <- xgb.prep.2$bestTune$min_child_weight
+
+xgb.2.params <- list(
+      objective = "binary:logistic",
+      # num_class = 2,
+      eta = 0.05,
+      max_depth = xgb.2.max_depth, 
+      gamma = xgb.2.gamma,
+      colsample_bytree = xgb.2.colsample_bytree,
+      min_child_weight = xgb.2.min_child_weight,
+      metric = "mlogloss"
+)
+
+
+res.2 <- xgb.cv(data = xtrain,
+                nrounds = 1000,
+                nfold = 4,
+                params = xgb.2.params,
+                early_stopping_rounds = 10,
+                print_every_n = 10
+)
+
+nrounds.2 <- res.2$best_iteration  
+
+xgb.2 <- xgboost(xtrain, nrounds = nrounds.2,
+                 params = xgb.2.params,
+                 early_stopping_rounds = 5,
+                 nfold = 4
+)
+
+pred.train.xgb.2.1 <- as.numeric(predict(xgb.2, xtrain) > .5)
+pred.test.xgb.2.1 <- as.numeric(predict(xgb.2, xtest) > .5)
+
+table(pred.train.xgb.2.1, feat.1[tr,])
