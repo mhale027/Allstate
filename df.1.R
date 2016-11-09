@@ -35,6 +35,8 @@ training <- data.frame(fread("train.csv", header = TRUE))
 test <- data.frame(fread("test.csv", header = TRUE))
 sample <- data.frame(fread("sample_submission.csv", header = TRUE))
 
+training <- filter(training, loss < 11500)
+
 training.length <- nrow(training)
 test.length <- nrow(test)
 
@@ -103,7 +105,7 @@ feat.1[tr] <- ifelse(training.loss > mean.loss, 1, 0)
 for (i in tr) {
       if (z.score[i] < -.5) {
             feat.2[i] <- 1
-      } else if (z.score[i] < -.02) {
+      } else if (z.score[i] < .5) {
             feat.2[i] <- 2
       } else {
             feat.2[i] <- 3
@@ -112,32 +114,30 @@ for (i in tr) {
 
 
 for (i in tr) {
-      if (z.score[i] < -.68) {
+      if (z.score[i] < -.6) {
             feat.3[i] <- 1
-      } else if (z.score[i] < -.46) {
+      } else if (z.score[i] < -.2) {
             feat.3[i] <- 2
-      }else if (z.score[i] < -.13) {
+      }else if (z.score[i] < .2) {
             feat.3[i] <- 3
-      }else if (z.score[i] < .49) {
+      }else {
             feat.3[i] <- 4
-      } else {
-            feat.3[i] <- 5
-      }
+      } 
 }
 
 
 for (i in tr) {
-      if (z.score[i] < -.74) {
+      if (z.score[i] < -.9) {
             feat.4[i] <- 1
-      } else if (z.score[i] < -.59) {
+      } else if (z.score[i] < -.01) {
             feat.4[i] <- 2
-      }else if (z.score[i] < -.42) {
+      }else if (z.score[i] < 0) {
             feat.4[i] <- 3
-      }else if (z.score[i] < -.19) {
+      }else if (z.score[i] < .01) {
             feat.4[i] <- 4
       }else if (z.score[i] < .16) {
             feat.4[i] <- 5
-      }else if (z.score[i] < .81) {
+      }else if (z.score[i] < 1) {
             feat.4[i] <- 6
       } else {
             feat.4[i] <- 7
@@ -146,11 +146,11 @@ for (i in tr) {
 
 
 for (i in tr) {
-      if (z.score[i] < -.77) {
+      if (z.score[i] < -1) {
             feat.5[i] <- 1
-      } else if (z.score[i] < -.66) {
+      } else if (z.score[i] < -.9) {
             feat.5[i] <- 2
-      }else if (z.score[i] < -.54) {
+      }else if (z.score[i] < -.5) {
             feat.5[i] <- 3
       }else if (z.score[i] < -.40) {
             feat.5[i] <- 4
@@ -217,9 +217,8 @@ levels(feat.4$feat.4) <- make.names(levels(feat.4$feat.4), unique = TRUE)
 levels(feat.5$feat.5) <- make.names(levels(feat.5$feat.5), unique = TRUE)
 levels(feat.6$feat.6) <- make.names(levels(feat.6$feat.6), unique = TRUE)
 
-save(alldata, file = "template.RData")
+save(alldata, file = "template.under.3.RData")
 # save(nzv.t, file = "nzv.t.RData")
-
 
 
 
@@ -384,6 +383,9 @@ pred.test.xgb.2 <- as.numeric(predict(xgb.2, xtest) > .5)
                                # 0 117857  15791
                                # 1   6022  48648
 
+# filtered z.score under 3
+
+
 f.1 <- data.frame(f.1 = c(pred.train.xgb.2, pred.test.xgb.2))
 save(f.1, file = "feature.1.RData")
 alldata <- cbind(alldata, f.1)
@@ -514,14 +516,14 @@ xgb.2.colsample_bytree <- xgb.prep.2$bestTune$colsample_bytree
 xgb.2.min_child_weight <- xgb.prep.2$bestTune$min_child_weight
 
 xgb.2.params <- list(
-      objective = "binary:logistic",
-      # num_class = 2,
+      objective = "multi:softmax",
+      num_class = 3,
       eta = 0.05,
       max_depth = xgb.2.max_depth, 
       gamma = xgb.2.gamma,
       colsample_bytree = xgb.2.colsample_bytree,
       min_child_weight = xgb.2.min_child_weight,
-      metric = "mlogloss"
+      metric = "Accuracy"
 )
 
 
@@ -550,6 +552,28 @@ pred.test.xgb.2 <- predict(xgb.2, xtest)
 # 1 56393  8530  4326
 # 2 18382 23540 11236
 # 3  6135  7810 51966
+
+# pred.train.xgb.2
+# 0     1     2
+# 1 57983  9837  1429
+# 2 19018 29161  4979
+# 3  7157 10409 48345
+
+
+# filtered
+# pred.train.xgb.2             X1    X2    X3
+#                        0  66697 18449  9543
+#                        1   1733 11409  1930
+#                        2   6229 11183 57358
+
+
+# filtered and adjusted around z.score = 0
+# pred.train.xgb.2       pred.train.xgb.2
+#                             0      1      2
+#                             1 110234      0   6140
+#                             2    822      7    454
+#                             3  15101      0  51773
+
 f.2 <- data.frame(f.2 = c(pred.train.xgb.2, pred.test.xgb.2))
 save(f.2, file = "feature.2.RData")
 
