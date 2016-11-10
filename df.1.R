@@ -35,7 +35,7 @@ training <- data.frame(fread("train.csv", header = TRUE))
 test <- data.frame(fread("test.csv", header = TRUE))
 sample <- data.frame(fread("sample_submission.csv", header = TRUE))
 
-training <- filter(training, loss < 11500)
+# training <- filter(training, loss < 11500)
 
 training.length <- nrow(training)
 test.length <- nrow(test)
@@ -169,7 +169,7 @@ for (i in tr) {
 
 
 for (i in tr) {
-      if (z.score[i] < -1.1) {
+      if (z.score[i] < -1) {
             feat_6[i] <- 1
       } else if (z.score[i] < -.9) {
             feat_6[i] <- 2
@@ -214,9 +214,9 @@ levels(feat_6$feat_6) <- make.names(levels(feat_6$feat_6), unique = TRUE)
 
 
 
-save(alldata, file = "template.under.3.RData")
+save(alldata, file = "template.RData")
 # save(nzv.t, file = "nzv.t.RData")
-
+gc()
 
 #################################################################
 ##################################################################
@@ -227,7 +227,7 @@ save(alldata, file = "template.under.3.RData")
 # Fitting 
 # nrounds = 10, 
 # max_depth = 10, 
-# eta = 0.1, 
+# eta = .2, 
 # gamma = 5, 
 # colsample_bytree = 0.7, 
 # min_child_weight = 2
@@ -238,7 +238,7 @@ xtest <- xgb.DMatrix(data.matrix(alldata[te,-1]))
 
 xgb.grid.f1.1 <- expand.grid(
       nrounds = 10,
-      eta = 0.1,
+      eta = .2,
       max_depth = c(8, 10, 12, 14),
       gamma = c(0, 3, 5),
       colsample_bytree = c(0.7, 0.85, 1.0),
@@ -306,7 +306,7 @@ pred.test.xgb.f1.1 <- predict(xgb.f1.1, xtest)
 
 xgb.grid.f1.2 <- expand.grid(
       nrounds = 10,
-      eta = 0.05,
+      eta = .2,
       max_depth = c(9, 10, 11, 12),
       gamma = c(2, 3, 4),
       colsample_bytree = c(0.7, 0.75, .8),
@@ -343,7 +343,7 @@ xgb.f1.2.min_child_weight <- xgb.prep.f1.2$bestTune$min_child_weight
 xgb.f1.2.params <- list(
       objective = "multi:softmax",
       num_class = 2,
-      eta = 0.05,
+      eta = .2,
       max_depth = xgb.f1.2.max_depth, 
       gamma = xgb.f1.2.gamma,
       colsample_bytree = xgb.f1.2.colsample_bytree,
@@ -381,8 +381,8 @@ pred.test.xgb.f1.2 <- predict(xgb.f1.2, xtest)
 
 f.1 <- data.frame(f.1 = c(pred.train.xgb.f1.2, pred.test.xgb.f1.2))
 
-save(f.1, file = "feature.1.RData")
-
+save(f.1_1, file = "feature.1.RData")
+save(xgb.f1_1, file = "xgb.f1.2.RData")
 alldata <- cbind(alldata, f.1)
 
 
@@ -393,11 +393,11 @@ alldata <- cbind(alldata, f.1)
 ####################       feature guess 2        ###############
 ################################################################
 ###############################################################
-
+gc()
 # Fitting 
 # nrounds = 10, 
 # max_depth = 10, 
-# eta = 0.1, 
+# eta = .2, 
 # gamma = 5, 
 # colsample_bytree = 0.7, 
 # min_child_weight = 2
@@ -408,7 +408,7 @@ xtest <- xgb.DMatrix(data.matrix(alldata[te,-1]))
 
 xgb.grid.f2.1 <- expand.grid(
       nrounds = 10,
-      eta = 0.1,
+      eta = .2,
       max_depth = c(8, 10, 12, 14),
       gamma = c(0, 3, 5),
       colsample_bytree = c(0.7, 0.85, 1.0),
@@ -477,7 +477,7 @@ pred.test.xgb.f2.1 <- predict(xgb.f2.1, xtest)
 
 xgb.grid.f2.2 <- expand.grid(
       nrounds = 10,
-      eta = 0.05,
+      eta = .2,
       max_depth = c(9, 10, 11, 12),
       gamma = c(2, 3, 4),
       colsample_bytree = c(0.7, 0.75, .8),
@@ -514,7 +514,7 @@ xgb.f2.2.min_child_weight <- xgb.prep.f2.2$bestTune$min_child_weight
 xgb.f2.2.params <- list(
       objective = "multi:softmax",
       num_class = 3,
-      eta = 0.05,
+      eta = .2,
       max_depth = xgb.f2.2.max_depth, 
       gamma = xgb.f2.2.gamma,
       colsample_bytree = xgb.f2.2.colsample_bytree,
@@ -533,7 +533,7 @@ res.f2.2 <- xgb.cv(data = xtrain,
 
 nrounds.f2.2 <- res.f2.2$best_iteration  
 
-xgb.f2.2 <- xgboost(xtrain, nrounds = nrounds.2,
+xgb.f2.2 <- xgboost(xtrain, nrounds = nrounds.f2.2,
                  params = xgb.f2.2.params,
                  early_stopping_rounds = 5,
                  nfold = 4
@@ -552,8 +552,8 @@ pred.test.xgb.f2.2 <- predict(xgb.f2.2, xtest)
 
 f.2 <- data.frame(f.2 = c(pred.train.xgb.f2.2, pred.test.xgb.f2.2))
 
-save(f.2, file = "feature.2.RData")
-
+save(f.2_1, file = "feature.2.RData")
+save(xgb.f2.2_1, file = "xgb.f2.2.RData")
 alldata <- cbind(alldata, f.2)
 
 #################################################################
@@ -561,11 +561,11 @@ alldata <- cbind(alldata, f.2)
 ####################       feature guess 3        ###############
 ################################################################
 ###############################################################
-
+gc()
 # Fitting 
 # nrounds = 10, 
 # max_depth = 10, 
-# eta = 0.1, 
+# eta = .2, 
 # gamma = 5, 
 # colsample_bytree = 0.7, 
 # min_child_weight = 2
@@ -576,7 +576,7 @@ xtest <- xgb.DMatrix(data.matrix(alldata[te,-1]))
 
 xgb.grid.f3.1 <- expand.grid(
       nrounds = 10,
-      eta = 0.1,
+      eta = .2,
       max_depth = c(8, 10, 12, 14),
       gamma = c(0, 3, 5),
       colsample_bytree = c(0.7, 0.85, 1.0),
@@ -645,7 +645,7 @@ pred.test.xgb.f3.1 <- predict(xgb.f3.1, xtest)
 
 xgb.grid.f3.2 <- expand.grid(
       nrounds = 10,
-      eta = 0.05,
+      eta = .2,
       max_depth = c(9, 10, 11, 12),
       gamma = c(2, 3, 4),
       colsample_bytree = c(0.7, 0.75, .8),
@@ -682,7 +682,7 @@ xgb.f3.2.min_child_weight <- xgb.prep.f3.2$bestTune$min_child_weight
 xgb.f3.2.params <- list(
       objective = "multi:softmax",
       num_class = 4,
-      eta = 0.05,
+      eta = .2,
       max_depth = xgb.f3.2.max_depth, 
       gamma = xgb.f3.2.gamma,
       colsample_bytree = xgb.f3.2.colsample_bytree,
@@ -739,8 +739,8 @@ pred.test.xgb.f3.2 <- predict(xgb.f3.2, xtest)
 #                             3  15101      0  51773
 
 f.3 <- data.frame(f.3 = c(pred.train.xgb.f3.2, pred.test.xgb.f3.2))
-save(f.3, file = "feature.3.RData")
-
+save(f.3_1, file = "feature.3.RData")
+save(xgb.f3.2_1, file = "xgb.f3.2.RData")
 alldata <- cbind(alldata, f.3)
 
 
@@ -753,11 +753,11 @@ alldata <- cbind(alldata, f.3)
 ####################       feature guess 4        ###############
 ################################################################
 ###############################################################
-
+gc()
 # Fitting 
 # nrounds = 10, 
 # max_depth = 10, 
-# eta = 0.1, 
+# eta = .2, 
 # gamma = 5, 
 # colsample_bytree = 0.7, 
 # min_child_weight = 2
@@ -768,7 +768,7 @@ xtest <- xgb.DMatrix(data.matrix(alldata[te,-1]))
 
 xgb.grid.f4.1 <- expand.grid(
       nrounds = 10,
-      eta = 0.1,
+      eta = .2,
       max_depth = c(8, 10, 12, 14),
       gamma = c(0, 3, 5),
       colsample_bytree = c(0.7, 0.85, 1.0),
@@ -837,7 +837,7 @@ pred.test.xgb.f4.1 <- predict(xgb.f4.1, xtest)
 
 xgb.grid.f4.2 <- expand.grid(
       nrounds = 10,
-      eta = 0.05,
+      eta = .2,
       max_depth = c(9, 10, 11, 12),
       gamma = c(2, 3, 4),
       colsample_bytree = c(0.7, 0.75, .8),
@@ -874,7 +874,7 @@ xgb.f4.2.min_child_weight <- xgb.prep.f4.2$bestTune$min_child_weight
 xgb.f4.2.params <- list(
       objective = "multi:softmax",
       num_class = 7,
-      eta = 0.05,
+      eta = .2,
       max_depth = xgb.f4.2.max_depth, 
       gamma = xgb.f4.2.gamma,
       colsample_bytree = xgb.f4.2.colsample_bytree,
@@ -931,8 +931,8 @@ pred.test.xgb.f4.2 <- predict(xgb.f4.2, xtest)
 #                             3  15101      0  51773
 
 f.4 <- data.frame(f.4 = c(pred.train.xgb.f4.2, pred.test.xgb.f4.2))
-save(f.4, file = "feature.4.RData")
-
+save(f.4_1, file = "feature.4.RData")
+save(xgb.f4.2_1, file = "xgb.f4.2.RData")
 alldata <- cbind(alldata, f.4)
 
 
@@ -943,11 +943,11 @@ alldata <- cbind(alldata, f.4)
 ####################       feature guess 5        ###############
 ################################################################
 ###############################################################
-
+gc()
 # Fitting 
 # nrounds = 10, 
 # max_depth = 10, 
-# eta = 0.1, 
+# eta = .2, 
 # gamma = 5, 
 # colsample_bytree = 0.7, 
 # min_child_weight = 2
@@ -958,7 +958,7 @@ xtest <- xgb.DMatrix(data.matrix(alldata[te,-1]))
 
 xgb.grid.f5.1 <- expand.grid(
       nrounds = 10,
-      eta = 0.1,
+      eta = .2,
       max_depth = c(8, 10, 12, 14),
       gamma = c(0, 3, 5),
       colsample_bytree = c(0.7, 0.85, 1.0),
@@ -1027,7 +1027,7 @@ pred.test.xgb.f5.1 <- predict(xgb.f5.1, xtest)
 
 xgb.grid.f5.2 <- expand.grid(
       nrounds = 10,
-      eta = 0.05,
+      eta = .2,
       max_depth = c(9, 10, 11, 12),
       gamma = c(2, 3, 4),
       colsample_bytree = c(0.7, 0.75, .8),
@@ -1064,7 +1064,7 @@ xgb.f5.2.min_child_weight <- xgb.prep.f5.2$bestTune$min_child_weight
 xgb.f5.2.params <- list(
       objective = "multi:softmax",
       num_class = 9,
-      eta = 0.05,
+      eta = .2,
       max_depth = xgb.f5.2.max_depth, 
       gamma = xgb.f5.2.gamma,
       colsample_bytree = xgb.f5.2.colsample_bytree,
@@ -1121,8 +1121,8 @@ pred.test.xgb.f5.2 <- predict(xgb.f5.2, xtest)
 #                             3  15101      0  51773
 
 f.5 <- data.frame(f.5 = c(pred.train.xgb.f5.2, pred.test.xgb.f5.2))
-save(f.5, file = "feature.5.RData")
-
+save(f.5_1, file = "feature.5.RData")
+save(xgb.f5.2_1, file = "xgb.f5.2.RData")
 alldata <- cbind(alldata, f.5)
 
 
@@ -1132,11 +1132,11 @@ alldata <- cbind(alldata, f.5)
 ####################       feature guess 6        ###############
 ################################################################
 ###############################################################
-
+gc()
 # Fitting 
 # nrounds = 10, 
 # max_depth = 10, 
-# eta = 0.1, 
+# eta = .2, 
 # gamma = 5, 
 # colsample_bytree = 0.7, 
 # min_child_weight = 2
@@ -1147,7 +1147,7 @@ xtest <- xgb.DMatrix(data.matrix(alldata[te,-1]))
 
 xgb.grid.f6.1 <- expand.grid(
       nrounds = 10,
-      eta = 0.1,
+      eta = .2,
       max_depth = c(8, 10, 12, 14),
       gamma = c(0, 3, 5),
       colsample_bytree = c(0.7, 0.85, 1.0),
@@ -1216,7 +1216,7 @@ pred.test.xgb.f6.1 <- predict(xgb.f6.1, xtest)
 
 xgb.grid.f6.2 <- expand.grid(
       nrounds = 10,
-      eta = 0.05,
+      eta = .2,
       max_depth = c(9, 10, 11, 12),
       gamma = c(2, 3, 4),
       colsample_bytree = c(0.7, 0.75, .8),
@@ -1253,7 +1253,7 @@ xgb.f6.2.min_child_weight <- xgb.prep.f6.2$bestTune$min_child_weight
 xgb.f6.2.params <- list(
       objective = "multi:softmax",
       num_class = 11,
-      eta = 0.05,
+      eta = .2,
       max_depth = xgb.f6.2.max_depth, 
       gamma = xgb.f6.2.gamma,
       colsample_bytree = xgb.f6.2.colsample_bytree,
@@ -1310,15 +1310,18 @@ pred.test.xgb.f6.2 <- predict(xgb.f6.2, xtest)
 #                             3  15101      0  51773
 
 f.6 <- data.frame(f.6 = c(pred.train.xgb.f6.2, pred.test.xgb.f6.2))
-save(f.6, file = "feature.6.RData")
-
+save(f.6_1, file = "feature.6.RData")
+save(xgb.f6.2_1, file = "xgb.f6.2.RData")
 alldata <- cbind(alldata, f.6)
 
 
-
-
-
-
+save(alldata, file = "df.RData")
+save(tr, file = "tr.RData")
+save(te, file = "te.RData")
+save(training.loss, file = "training.loss.RData")
+save(training.id, file = "training.id.RData")
+save(test.id, file = "test.id.RData")
+gc()
 ##############################  END  ###############################
 
 

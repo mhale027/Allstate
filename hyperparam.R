@@ -11,67 +11,33 @@ library(nnet)
 library(h2o)
 
 setwd("~/Projects/kaggle/Allstate")
-set.seed(7890)
-load("features.RData")
-load("data.RData")
 
+set.seed(7890)
+
+load("df.RData")
+load("tr.RData")
+load("te.RData")
+load("training.loss.RData")
 
 sample <- data.frame(fread("sample_submission.csv", header = TRUE))
-
-lengths <- features[[2]]
-training.length <- lengths[1]
-test.length <- lengths[2]
-
-tr <- 1:training.length
-te <- (1+training.length):(training.length + test.length)
-
-ids <- features[[3]]
-training.id <- ids[tr]
-test.id <- ids[te]
-
-losses <- features[[4]]
-training.loss <- losses[tr]
 
 mean.loss <- mean(training.loss)
 
 
 
 
-
-x.vars <- names(alldata)[-1]
-response <- names(alldata)[1]
-
-
-xtrain <- alldata[tr,-1]
-xtest <- alldata[te,-1]
-ytrain <- alldata[tr,1]
-
-
-train <- xgb.DMatrix(data.matrix(xtrain), label = data.matrix(ytrain))
-test <- xgb.DMatrix(data.matrix(xtest))
-
-
-
-
-
-###################GRID SEARCH###################
-
-# xgb <- xgboost(data = train, nrounds = 1)
-# 
-# base.margin <- predict(xgb.1, train, outputmargin = TRUE)
-# 
-# setinfo(xtrain, "base_margin", base.margin) 
-
-
+ytrain <- training.loss
+xtrain <- xgb.DMatrix(data.matrix(alldata[tr,-1]), label = data.matrix(ytrain))
+xtest <- xgb.DMatrix(data.matrix(alldata[te,-1]))
 
 
 xgb.grid <- expand.grid(
       nrounds = 10, 
-      eta = 0.01, 
-      max_depth = c(10, 12, 14), 
+      eta = 0.2, 
+      max_depth = c(6, 8, 10, 12, 14, 16), 
       gamma = c(0, 3, 5), 
-      colsample_bytree = c(0.7, 0.85, 1.0), 
-      min_child_weight = c(0, 1, 2)
+      colsample_bytree = c(0.6, 0.7, 0.85, 1.0), 
+      min_child_weight = c(0, 1, 2, 3)
 )
 
 xgb.train.control <- trainControl(
@@ -100,20 +66,20 @@ xgb.1.min_child_weight <- xgb.prep$bestTune$min_child_weight
 
 xgb.1.params <- list(
       objective = "reg:linear",
-      eta = 0.01,              
-      max_depth = xgb.1.max_depth, 
-      gamma = xgb.1.gamma,
-      colsample_bytree = xgb.1.colsample_bytree,
-      min_child_weight = xgb.1.min_child_weight,
-      eval_metric = "rmse"      
+      eta = 0.2,              
+      max_depth = 12, 
+      gamma = 5,
+      colsample_bytree = .8,
+      min_child_weight = 1,
+      eval_metric = "rmse"
 )
 
 
-xgb.1 <- xgboost(train, params = xgb.1.params, nfold = 4, nrounds = 200, early_stopping_rounds = 5)
+xgb.1 <- xgboost(xtrain, params = xgb.1.params, nfold = 4, nrounds = 300, early_stopping_rounds = 5)
 
-pred.test.xgb.1 <- predict(xgb.1, test)
+pred.test.xgb.1 <- predict(xgb.1, xtest)
 
-head(pred.test.xgb.1)*mean.loss
+head(pred.test.xgb.1)
 #1871.790 2246.508 5439.477 5300.870 1137.884 2224.441
 #1635.1407 1124.9293 6663.1151 6018.9569  380.7898 3261.7621           LB: 1239.73412,
 
