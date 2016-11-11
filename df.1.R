@@ -9,9 +9,11 @@ library(caret)
 library(Metrics)
 library(nnet)
 library(h2o)
+library(h2oEnsemble)
 
 setwd("~/Projects/kaggle/Allstate")
 load("features.RData")
+source("dnn.R")
 set.seed(7890)
 
 

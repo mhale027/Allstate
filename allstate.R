@@ -174,8 +174,8 @@ load("nzv.t.RData")
 load("df.RData")
 
 ytrain <- data.matrix(training.loss)
-xtrain <- xgb.DMatrix(data.matrix(alldata[,-1]), label = ytrain)
-xtest <- xgb.DMatrix(data.matrix(alldata[te,-1]))
+xtrain <- xgb.DMatrix(data.matrix(alldata[tr,2:141]), label = ytrain)
+xtest <- xgb.DMatrix(data.matrix(alldata[te,2:141]))
 
 
 params <- list(
@@ -187,7 +187,7 @@ params <- list(
       min_child_weight = 1,
       # base_score = 7.69,
       num_parallel_tree = 1,
-      metric = "Accuracy"
+      metric = "ROC"
 )
 
 xg_eval_mae <- function (yhat, data) {
@@ -277,7 +277,7 @@ head(pred.train.xgb.1)
 head(pred.test.xgb.1)
 #[1]            1735.7131  2217.6819 10178.3232  6438.7598   838.8784  2768.6628      LB: 1165.80875
 # with features 1635.2185  1993.2141 9452.0166   7079.5620   978.2036  1973.6853      LB: 1201.82510
-
+# with f.1      1934.1953  1988.7725 8322.2188   5864.6196   869.9561  1965.6763
 
 xgb.grid.2 <- expand.grid(
       nrounds = 10, 
@@ -419,8 +419,8 @@ head(pred.test.xgb.3)
 # -sprs + features  1955.4972  1481.7275 9783.0225   7675.4507   880.4752  2174.181   1000       LB: 1223.12381
 # -sprs + features  1761.6776  1895.6948 9365.6973   6809.6709   985.4151  1963.3564  100        LB: 1203.25453
 
-ytrain <- c(ytrain, pred.test.xgb.3)
-
+# ytrain <- c(ytrain, pred.test.xgb.3)
+# xtrain <- xgb.DMatrix(data.matrix(alldata[,2:141]), label = ytrain)
 
 
 xgb.grid.final <- expand.grid(
