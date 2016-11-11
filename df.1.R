@@ -1310,7 +1310,7 @@ pred.test.xgb.f6.2 <- predict(xgb.f6.2, xtest)
 #                             3  15101      0  51773
 
 f.6 <- data.frame(f.6 = c(pred.train.xgb.f6.2, pred.test.xgb.f6.2))
-save(f.6_1, file = "feature.6.RData")
+save(f.6, file = "feature.6.RData")
 save(xgb.f6.2_1, file = "xgb.f6.2.RData")
 alldata <- cbind(alldata, f.6)
 
