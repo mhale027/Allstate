@@ -9,21 +9,19 @@ library(h2o)
 library(h2oEnsemble)
 
 
-setwd("~/Projects/kaggle/Allstate")
+setwd("/users/matt/documents/projects/kaggle/allstate")
 set.seed(7890)
-
-sample <- read.csv("sample_submission.CSV", header = TRUE)
-load("df.RData")
+load("template.RData")
 source("features.R")
 
 
 h2o.init(nthreads = -1)  
 h2o.removeAll() 
 
-train.hex <- as.h2o(alldata[tr,1:140])
+train <- as.h2o(alldata[tr,1:140])
 test.hex <- as.h2o(alldata[te,1:140])
 
-sets <- h2o.splitFrame(train.hex, .6)
+sets <- h2o.splitFrame(train, .6, seed = 1)
 
 train.hex <- h2o.assign(sets[[1]], "train.hex")
 valid.hex <- h2o.assign(sets[[2]], "valid.hex")
@@ -36,7 +34,7 @@ learner <- c("h2o.glm.wrapper", "h2o.randomForest.wrapper",
              "h2o.gbm.wrapper", "h2o.deeplearning.wrapper")
 metalearner <- "h2o.glm.wrapper"
 
-ens <- h2o.ensemble(x = features, y = response, 
+ens.1 <- h2o.ensemble(x = features, y = response, 
                     training_frame = train.hex, 
                     validation_frame = valid.hex,
                     family = "gaussian", 
@@ -44,30 +42,146 @@ ens <- h2o.ensemble(x = features, y = response,
                     metalearner = metalearner,
                     cvControl = list(V = 5))
 
-pred <- as.numeric(unlist(as.data.frame(predict(ens, test.hex))))
+pred.train.ens.1 <- as.numeric(unlist(as.data.frame(predict(ens.1, train.hex)$pred)))
+pred.valid.ens.1 <- as.numeric(unlist(as.data.frame(predict(ens.1, valid.hex)$pred)))
+pred.test.ens.1 <- as.numeric(unlist(as.data.frame(predict(ens.1, test.hex)$pred)))
 
-predictions <- as.data.frame(pred$pred)  #third column is P(Y==1)
-labels <- as.data.frame(test.hex[,response])[,1]
+g1 <- data.frame(g1 = c(pred.train.ens.1, pred.valid.ens.1, pred.test.ens.1))
+sample$loss <- pred.test.ens.1
+#write.csv(sample, "sample.submission.11.12.3.csv", row.names = FALSE)
+#         LB: 1201.90208
+#save(ens.1, file = "ens.1.RData")
 
-h2o.glm.1 <- function(..., alpha = 0.0) h2o.glm.wrapper(..., alpha = alpha)
-h2o.glm.2 <- function(..., alpha = 0.5) h2o.glm.wrapper(..., alpha = alpha)
-h2o.glm.3 <- function(..., alpha = 1.0) h2o.glm.wrapper(..., alpha = alpha)
-h2o.randomForest.1 <- function(..., ntrees = 200, nbins = 50, seed = 1) h2o.randomForest.wrapper(..., ntrees = ntrees, nbins = nbins, seed = seed)
-h2o.randomForest.2 <- function(..., ntrees = 200, sample_rate = 0.75, seed = 1) h2o.randomForest.wrapper(..., ntrees = ntrees, sample_rate = sample_rate, seed = seed)
-h2o.randomForest.3 <- function(..., ntrees = 200, sample_rate = 0.85, seed = 1) h2o.randomForest.wrapper(..., ntrees = ntrees, sample_rate = sample_rate, seed = seed)
-h2o.randomForest.4 <- function(..., ntrees = 200, nbins = 50, balance_classes = TRUE, seed = 1) h2o.randomForest.wrapper(..., ntrees = ntrees, nbins = nbins, balance_classes = balance_classes, seed = seed)
-h2o.gbm.1 <- function(..., ntrees = 100, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, seed = seed)
-h2o.gbm.2 <- function(..., ntrees = 100, nbins = 50, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, nbins = nbins, seed = seed)
-h2o.gbm.3 <- function(..., ntrees = 100, max_depth = 10, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, max_depth = max_depth, seed = seed)
-h2o.gbm.4 <- function(..., ntrees = 100, col_sample_rate = 0.8, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, col_sample_rate = col_sample_rate, seed = seed)
-h2o.gbm.5 <- function(..., ntrees = 100, col_sample_rate = 0.7, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, col_sample_rate = col_sample_rate, seed = seed)
-h2o.gbm.6 <- function(..., ntrees = 100, col_sample_rate = 0.6, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, col_sample_rate = col_sample_rate, seed = seed)
-h2o.gbm.7 <- function(..., ntrees = 100, balance_classes = TRUE, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, balance_classes = balance_classes, seed = seed)
-h2o.gbm.8 <- function(..., ntrees = 100, max_depth = 3, seed = 1) h2o.gbm.wrapper(..., ntrees = ntrees, max_depth = max_depth, seed = seed)
-h2o.deeplearning.1 <- function(..., hidden = c(500,500), activation = "Rectifier", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-h2o.deeplearning.2 <- function(..., hidden = c(200,200,200), activation = "Tanh", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-h2o.deeplearning.3 <- function(..., hidden = c(500,500), activation = "RectifierWithDropout", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-h2o.deeplearning.4 <- function(..., hidden = c(500,500), activation = "Rectifier", epochs = 50, balance_classes = TRUE, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, balance_classes = balance_classes, seed = seed)
-h2o.deeplearning.5 <- function(..., hidden = c(100,100,100), activation = "Rectifier", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-h2o.deeplearning.6 <- function(..., hidden = c(50,50), activation = "Rectifier", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-h2o.deeplearning.7 <- function(..., hidden = c(100,100), activation = "Rectifier", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+
+
+
+
+# train on all data where test losses are the esimate from predict 
+
+
+alldata[te,1] <- pred.test.ens.1
+
+train <- as.h2o(alldata)
+
+sets <- h2o.splitFrame(train, .8, seed = 1)
+
+train.hex <- h2o.assign(sets[[1]], "train.hex")
+valid.hex <- h2o.assign(sets[[2]], "valid.hex")
+
+#rm(train, sets)
+
+ens.1.1 <- h2o.ensemble(x = features, y = response, 
+                    training_frame = train.hex, 
+                    validation_frame = valid.hex,
+                    family = "gaussian", 
+                    learner = learner, 
+                    metalearner = metalearner,
+                    cvControl = list(V = 5)
+)
+
+train.hex <- as.h2o(alldata[tr,])
+
+pred.ens.1.1 <- as.numeric(unlist(as.data.frame(predict(ens.1.1, train)$pred)))
+
+
+#write.csv(sample, "sample.submission.11.12.3.csv", row.names = FALSE)
+#     LB: 1188.13732
+#     LB: 
+
+alldata <- cbind(alldata, pred.ens.1.1)
+
+tr.1 <- 1:130000
+tr.2 <- 130001:188318
+xgb.train <- alldata[tr,]
+xgb.test <- alldata[te,]
+
+ytrain <- data.matrix(alldata[tr.1, 1])
+xtrain <- xgb.DMatrix(data.matrix(xgb.train[tr.1,-1]))
+yvalid <- data.matrix(alldata[tr.2, 1])
+xvalid <- xgb.DMatrix(data.matrix(xgb.train[tr.2,-1]))
+xtest <- xgb.DMatrix(data.matrix(xgb.test[,-1]), label = xgb.test[,1 ])
+
+xgb.grid.f1.1 <- expand.grid(
+    nrounds = 10,
+    eta = .05,
+    max_depth = c(8, 10, 14),
+    gamma = c(0, 3),
+    colsample_bytree = c(0.7, 0.75, .8),
+    min_child_weight = 1,
+    subsample = c(.8, .9)
+    )
+
+
+
+xgb.train.control.f1.1 <- trainControl(
+    method = "cv",
+    number = 4,
+    verboseIter = TRUE,
+    returnData = FALSE,
+    returnResamp = "all",
+    allowParallel = TRUE
+)
+
+
+xgb.prep.f1.1 <- train(x = alldata[1:1000,-1],
+                       y=alldata[1:1000,1],
+                       trControl = xgb.train.control.f1.1,
+                       tuneGrid = xgb.grid.f1.1,
+                       method = "xgbTree",
+                       metric = "RMSE"
+)
+
+
+
+xgb.f1.1.max_depth <- xgb.prep.f1.1$bestTune$max_depth
+xgb.f1.1.gamma <- xgb.prep.f1.1$bestTune$gamma
+xgb.f1.1.colsample_bytree <- xgb.prep.f1.1$bestTune$colsample_bytree
+xgb.f1.1.min_child_weight <- xgb.prep.f1.1$bestTune$min_child_weight
+
+xgb.f1.1.params <- list(
+    objective = "reg:linear",
+    num_class = 2,
+    eta = 0.05,
+    max_depth = xgb.f1.1.max_depth, 
+    gamma = xgb.f1.1.gamma,
+    colsample_bytree = xgb.f1.1.colsample_bytree,
+    min_child_weight = xgb.f1.1.min_child_weight,
+    metric = "merror",
+    feval = "mae"
+)
+
+res.f1.1 <- xgb.cv(data = xtrain,
+                   label = ytrain,
+                   nrounds = 500,
+                   nfold = 4,
+                   params = xgb.f1.1.params,
+                   early_stopping_rounds = 10,
+                   print_every_n = 10
+)
+
+nrounds.f1.1 <- res.f1.1$best_iteration     
+
+xgb.f1.1 <- xgb.train(data = xtrain, 
+                    params = xgb.f1.1.params,
+                    watchlist = xval,
+                    nfold = 4, 
+                    nrounds = nrounds.f1.1, 
+                    early_stopping_rounds = 10)
+
+pred.train.xgb.f1.1 <- predict(xgb.f1.1, xtrain)
+pred.test.xgb.f1.1 <- predict(xgb.f1.1, xtest)
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              
+              

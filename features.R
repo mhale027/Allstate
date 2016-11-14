@@ -1,9 +1,10 @@
-load("train.raw.RData")
-load("test.raw.RData")
+setwd("/users/matt/documents/projects/kaggle/allstate")
+training <- data.frame(fread("train.csv", header = TRUE))
+test <- data.frame(fread("test.csv", header = TRUE))
+sample <- data.frame(fread("sample_submission.csv", header = TRUE))
 
-
-length.train <- 188318
-legnth.test <- 125546
+length.train <- nrow(training)
+legnth.test <- nrow(test)
 
 training.id <- training$id
 test.id <- test$id
