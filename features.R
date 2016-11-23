@@ -30,3 +30,9 @@ fold2 <- 35001:70000
 fold3 <- 70001:105000
 fold4 <- 105001:140000
 fold5 <- 140001:188318
+
+f1 <- tr[-fold1]
+f2 <- tr[-fold2]
+f3 <- tr[-fold3]
+f4 <- tr[-fold4]
+f5 <- tr[-fold5]
