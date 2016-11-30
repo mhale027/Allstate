@@ -70,7 +70,7 @@ xg_eval_mae <- function (yhat, dtrain) {
       return (list(metric = "error", value = round(err, 3)))
 }
 
-train <- alldata[-c(fold11),]
+train <- alldata[tr[-fold11],]
 valid <- alldata[fold11,]
 test <- alldata[te,]
 
@@ -85,6 +85,8 @@ test.hex <- as.h2o(test, "test.hex")
 
 features = 2:ncol(train.hex)
 response = 1
+
+down <- function(arg) as.numeric(unlist(as.data.frame(arg)))
 
 
 dnn1<-h2o.deeplearning(x = features, 
@@ -147,13 +149,23 @@ dnn5<-h2o.deeplearning(x = features,
 # LB: 1165
 
 
-pnn1 <- down(predict(dnn1, valid.hex[,-1]))
-pnn2 <- down(predict(dnn2, valid.hex[,-1]))
-pnn3 <- down(predict(dnn3, valid.hex[,-1]))
-pnn4 <- down(predict(dnn4, valid.hex[,-1]))
-pnn5 <- down(predict(dnn5, valid.hex[,-1]))
+pred.train.dnn1 <- down(predict(dnn1, train.hex[,-1]))
+pred.train.dnn2 <- down(predict(dnn2, train.hex[,-1]))
+pred.train.dnn3 <- down(predict(dnn3, train.hex[,-1]))
+pred.train.dnn4 <- down(predict(dnn4, train.hex[,-1]))
+pred.train.dnn5 <- down(predict(dnn5, train.hex[,-1]))
 
+pred.valid.dnn1 <- down(predict(dnn1, valid.hex[,-1]))
+pred.valid.dnn2 <- down(predict(dnn2, valid.hex[,-1]))
+pred.valid.dnn3 <- down(predict(dnn3, valid.hex[,-1]))
+pred.valid.dnn4 <- down(predict(dnn4, valid.hex[,-1]))
+pred.valid.dnn5 <- down(predict(dnn5, valid.hex[,-1]))
 
+pred.test.dnn1 <- down(predict(dnn1, test.hex[,-1]))
+pred.test.dnn2 <- down(predict(dnn2, test.hex[,-1]))
+pred.test.dnn3 <- down(predict(dnn3, test.hex[,-1]))
+pred.test.dnn4 <- down(predict(dnn4, test.hex[,-1]))
+pred.test.dnn5 <- down(predict(dnn5, test.hex[,-1]))
 
 
 
@@ -216,16 +228,18 @@ dnn.params <- list(
       distribution = "huber"
 )
 
-h2o.dnn.1 <- function(..., params = dnn.params, hidden = c(30, 150, 50), activation = "Rectifier", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-h2o.dnn.2 <- function(..., hidden = dnn.params, c(200,200,200), activation = "Rectifier", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-h2o.dnn.3 <- function(..., hidden = dnn.params, c(500,500), activation = "RectifierWithDropout", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-h2o.dnn.4 <- function(..., hidden = c(500,200), activation = "Rectifier", epochs = 30, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation,  seed = seed)
-h2o.dnn.5 <- function(..., hidden = c(200,100,50), activation = "RectifierWithDropout", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
-h2o.dnn.6 <- function(..., hidden = c(50,100,50), activation = "Rectifier", epochs = 30, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+h2o.dnn.1 <- function(..., params = dnn.params, hidden = c(30, 150, 50), activation = "Rectifier", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., params = params, hidden = hidden, activation = activation, seed = seed)
+h2o.dnn.2 <- function(..., params = dnn.params, hidden = c(200,200,200), activation = "Rectifier", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., params = params, hidden = hidden, activation = activation, seed = seed)
+h2o.dnn.3 <- function(..., params = dnn.params, hidden = c(500,500), activation = "RectifierWithDropout", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., params = params, hidden = hidden, activation = activation, seed = seed)
+h2o.dnn.4 <- function(..., params = dnn.params, hidden = c(500,200), activation = "Rectifier", epochs = 30, seed = 1)  h2o.deeplearning.wrapper(..., params = params, hidden = hidden, activation = activation,  seed = seed)
+h2o.dnn.5 <- function(..., params = dnn.params, hidden = c(200,100,50), activation = "RectifierWithDropout", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., params = params, hidden = hidden, activation = activation, seed = seed)
+h2o.dnn.6 <- function(..., params = dnn.params, hidden = c(50,100,50), activation = "Rectifier", epochs = 30, seed = 1)  h2o.deeplearning.wrapper(..., params = params, hidden = hidden, activation = activation, seed = seed)
 
 
 
-learner <- c("h2o.glm.wrapper", "h2o.gbm.1", "h2o.gbm.2", "h2o.gbm.3", "h2o.gbm.4", "h2o.gbm.5") #, "h2o.deeplearning.wrapper")
+learner <- c("h2o.glm.wrapper", "h2o.gbm.1", "h2o.gbm.2", "h2o.gbm.3", "h2o.gbm.4", "h2o.gbm.5",
+             "h2o.deeplearning.wrapper", "h2o.dnn.1", "h2o.dnn.2", "h2o.dnn.3", "h2o.dnn.4",
+             "h2o.dnn.5", "h2o.dnn.6")
 metalearner <- "h2o.glm.wrapper"
 
 ens.1 <- h2o.ensemble(x = features, y = response, 
@@ -235,17 +249,158 @@ ens.1 <- h2o.ensemble(x = features, y = response,
                       learner = learner, 
                       metalearner = metalearner)
 
-pred.train.ens.1 <- down(predict(ens.1, train.hex)$pred)
-pred.valid.ens.1 <- down(predict(ens.1, valid.hex)$pred)
-pred.test.ens.1 <- down(predict(ens.1, test.hex)$pred)
+pred.train.ens.1 <- predict(ens.1, train.hex)$pred
+pred.valid.ens.1 <- predict(ens.1, valid.hex)$pred
+pred.test.ens.1 <- predict(ens.1, test.hex)$pred
 train.df <- pred.train.ens.1$basepred
 valid.df <- pred.valid.ens.1$basepred
 test.df <- pred.test.ens.1$basepred
 
 
-t <- data.frame(p1 = pnn1, p2 = pnn2, p3 = pnn3, p4 = pnn4, p5 = pnn5, 
-                p6 = down(test.df[,1]), p7 = down(test.df[,2]),
-                p8 = down(test.df[,3]), p9 = pred.xgb, p10 = pred.gbdt)
+
+
+val.df <- data.frame(h2o.glm.wrapper = down(valid.df[,1]))
+
+for (i in 2:ncol(valid.df)) {
+      val.df <- cbind(val.df, down(valid.df[,i]))
+}
+names(val.df) <- names(valid.df)
+val.df <- cbind(loss = down(valid.hex$loss), val.df)
+
+val.df <- cbind(val.df, 
+                dnn1 = pred.valid.dnn1, 
+                dnn2 = pred.valid.dnn2, 
+                dnn3 = pred.valid.dnn3, 
+                dnn4 = pred.valid.dnn4, 
+                dnn5 = pred.valid.dnn5, 
+                xgb1 = pred.valid.xgb)
+# mae(exp(down(valid.hex$loss)), exp(val.df[,2]))
+# [1] 1208.383
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,3]))
+# [1] 1208.209
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,4]))
+# [1] 1180.307
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,5]))
+# [1] 1187.969
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,6]))
+# [1] 1181.871
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,7]))
+# [1] 1174.136
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,8]))
+# [1] 1163.72
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,9]))
+# [1] 1150.474
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,10]))
+# [1] 1171.442
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,11]))
+# [1] 1417.589
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,12]))
+# [1] 1151.089
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,13]))
+# [1] 1595.846
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,14]))
+# [1] 1141.94
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,15]))
+# [1] 1136.084
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,16]))
+# [1] 1142.759
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,17]))
+# [1] 1145.023
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,18]))
+# [1] 1140.6
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,19]))
+# [1] 1135.859
+# > mae(exp(down(valid.hex$loss)), exp(val.df[,20]))
+# [1] 1119.874
+# mae(exp(down(valid.hex$loss)), exp(pred.glm1))
+# [1] 1112.05
+# > mae(exp(down(valid.hex$loss)), exp(pred.glm2))
+# [1] 1112.151
+
+
+t.df <- data.frame(h2o.glm.wrapper = down(test.df[,1]))
+
+for (i in 2:ncol(test.df)) {
+      t.df <- cbind(t.df, down(test.df[,i]))
+}
+
+names(t.df) <- names(test.df)
+              
+t.df <- cbind(t.df, 
+            dnn1 = pred.test.dnn1, 
+            dnn2 = pred.test.dnn2, 
+            dnn3 = pred.test.dnn3, 
+            dnn4 = pred.test.dnn4, 
+            dnn5 = pred.test.dnn5, 
+            xgb1 = pred.test.xgb)
+
+
+
+xgb.f <- xgb.train(data = xgb.DMatrix(data.matrix(val.df[1:8000,-1]), label = down(valid.hex$loss[1:8000])),
+                   watchlist = list(val = xgb.DMatrix(data.matrix(val.df[8001:8318,-1]), 
+                                                      label = down(valid.hex$loss[8001:8318]))),
+                   nrounds = 1000,  
+                   feval = xg_eval_mae,
+                   maximize = FALSE,
+                   early_stopping_rounds = 10)
+
+
+val.df.hex <- as.h2o(val.df)
+
+val.train.hex <- val.df.hex[1:8000,]
+val.val.hex <- val.df.hex[8001:8318,]
+
+dnn.f <- h2o.deeplearning(y=1, x=2:ncol(val.df), training_frame = val.train.hex,
+                          validation_frame = val.val.hex,
+                          epochs = 50, 
+                          overwrite_with_best_model = TRUE,
+                          stopping_rounds = 10,
+                          hidden = c(200,200,200,200))
+
+
+
+adj <- function(arg, lambda){
+      
+      arg <- (arg - 7.79)*lambda + 7.79
+      
+}
+
+
+mae(exp(down(val.val.hex$loss)), exp(down(predict(dnn.f, val.val.hex[,-1]))))
+mae(exp(down(val.val.hex$loss)), exp(adj(down(predict(dnn.f, val.val.hex[,-1])), 1.02)))
+mae(exp(down(val.val.hex$loss)), exp(adj(down(predict(dnn.f, val.val.hex[,-1])), 1.03)))
+mae(exp(down(val.val.hex$loss)), exp(adj(down(predict(dnn.f, val.val.hex[,-1])), 1.04)))
+mae(exp(down(val.val.hex$loss)), exp(adj(down(predict(dnn.f, val.val.hex[,-1])), 1.05)))
+mae(exp(down(val.val.hex$loss)), exp(adj(down(predict(dnn.f, val.val.hex[,-1])), 1.06)))
+mae(exp(down(val.val.hex$loss)), exp(adj(down(predict(dnn.f, val.val.hex[,-1])), 1.07)))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -602,8 +757,8 @@ ens <- h2o.ensemble(x = features, y = response,
                     cvControl = list(V = 5)
 )
 
-pred.train.ens <- down(predict(ens, px.hex)$pred)))
-pred.test.ens <- down(predict(ens, pt.hex)$pred)))
+pred.train.ens <- down(predict(ens, px.hex)$pred)
+pred.test.ens <- down(predict(ens, pt.hex)$pred)
 
 head(pred.test.ens)
 sample$loss <- exp(pred.test.ens)
