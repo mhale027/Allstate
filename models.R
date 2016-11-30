@@ -57,6 +57,7 @@ f8 <- tr[-c(fold8)]
 f9 <- tr[-c(fold9)]
 f10 <- tr[-c(fold10)]
 
+down <- function(arg){as.numeric(unlist(as.data.frame(arg)))}
 
 ytrain <- data.matrix(alldata[tr,1])
 xtrain <- xgb.DMatrix(data.matrix(alldata[tr,-1]), label = ytrain)
@@ -68,6 +69,189 @@ xg_eval_mae <- function (yhat, dtrain) {
       err= mae(exp(y),exp(yhat) )
       return (list(metric = "error", value = round(err, 3)))
 }
+
+train <- alldata[-c(fold11),]
+valid <- alldata[fold11,]
+test <- alldata[te,]
+
+h2o.init(nthreads = -1)
+h2o.removeAll()
+
+train.hex <- as.h2o(train, "train.hex")
+valid.hex <- as.h2o(valid, "valid.hex")
+test.hex <- as.h2o(test, "test.hex")
+
+
+
+features = 2:ncol(train.hex)
+response = 1
+
+
+dnn1<-h2o.deeplearning(x = features, 
+                       y =response,
+                       training_frame=train.hex,
+                       validation_frame=valid.hex,
+                       epochs=20, 
+                       stopping_rounds=5,
+                       overwrite_with_best_model=T,
+                       activation="Rectifier",
+                       distribution="huber",
+                       hidden=c(100,100))
+
+
+dnn2<-h2o.deeplearning(x = features,
+                        y =response,
+                        training_frame=train.hex,
+                        validation_frame=valid.hex,
+                        epochs=20,
+                        stopping_rounds=5,
+                        overwrite_with_best_model=T,
+                        activation="Rectifier",
+                        distribution="huber",
+                        hidden=c(120, 100))
+
+
+dnn3<-h2o.deeplearning(x = features,
+                       y =response,
+                       training_frame=train.hex,
+                       validation_frame=valid.hex,
+                       epochs=30, 
+                       stopping_rounds=5,
+                       overwrite_with_best_model=T,
+                       activation="Rectifier",
+                       distribution="huber",
+                       hidden=c(120, 120))
+
+
+dnn4<-h2o.deeplearning(x = features, 
+                       y =response,
+                       training_frame=train.hex,
+                       validation_frame=valid.hex,
+                       epochs=20, 
+                       stopping_rounds=5,
+                       overwrite_with_best_model=T,
+                       activation="Rectifier",
+                       distribution="huber",
+                       hidden=c(80, 80, 80))
+
+dnn5<-h2o.deeplearning(x = features, 
+                       y =response,
+                       training_frame=train.hex,
+                       validation_frame=valid.hex,
+                       epochs=50, 
+                       stopping_rounds=5,
+                       overwrite_with_best_model=T,
+                       activation="Rectifier",
+                       distribution="huber",
+                       hidden=c(280, 280, 280))
+# LB: 1165
+
+
+pnn1 <- down(predict(dnn1, valid.hex[,-1]))
+pnn2 <- down(predict(dnn2, valid.hex[,-1]))
+pnn3 <- down(predict(dnn3, valid.hex[,-1]))
+pnn4 <- down(predict(dnn4, valid.hex[,-1]))
+pnn5 <- down(predict(dnn5, valid.hex[,-1]))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+gbm.hyper_params = list( max_depth = c(4,6,8,12,16,20))
+
+grid <- h2o.grid(
+      hyper_params = gbm.hyper_params,
+      search_criteria = list(strategy = "Cartesian"),
+      algorithm="gbm",
+      grid_id="gbm_grid1",
+      x = features, 
+      y = response, 
+      training_frame = train.hex[1:1000,], 
+      validation_frame = valid.hex[1:1000,],
+      ntrees = 10000,              
+      learn_rate = 0.05,           
+      learn_rate_annealing = 0.99,                                               
+      sample_rate = 0.8,                                                       
+      col_sample_rate = 0.8, 
+      seed = 7890,                                                             
+      ## early stopping once the validation AUC doesn't improve by at least 0.01% for 5 consecutive scoring events
+      stopping_rounds = 5,
+      stopping_tolerance = 1e-4,
+      stopping_metric = "MSE"
+)
+
+
+
+
+
+
+
+
+
+gbm.params <- list(
+      ntrees = 10000,
+      seed = 0,
+      stopping_rounds = 10)
+
+h2o.gbm.1 <- function(..., params = gbm.params, max_depth = 4, rate = .2, rate_annealing = .9, sample_rate = .9, col_sample_rate = .8){ h2o.gbm.wrapper(..., params = params, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+h2o.gbm.2 <- function(..., params = gbm.params, max_depth = 8, rate = .1, rate_annealing = .95, sample_rate = .8, col_sample_rate = .8){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+h2o.gbm.3 <- function(..., params = gbm.params, max_depth = 12, rate = .05, rate_annealing = .98, sample_rate = .8, col_sample_rate = .8){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+h2o.gbm.4 <- function(..., params = gbm.params, max_depth = 10, rate = .01, rate_annealing = .99, sample_rate = .8, col_sample_rate = .8){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+h2o.gbm.5 <- function(..., params = gbm.params, max_depth = 8, rate = .005, rate_annealing = .99, sample_rate = .8, col_sample_rate = .8){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+
+dnn.params <- list(
+      overwrite_with_best_model = TRUE,
+      stopping_rounds = 10,
+      stopping_metric = MSE,
+      distribution = "huber"
+)
+
+h2o.dnn.1 <- function(..., params = dnn.params, hidden = c(30, 150, 50), activation = "Rectifier", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+h2o.dnn.2 <- function(..., hidden = dnn.params, c(200,200,200), activation = "Rectifier", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+h2o.dnn.3 <- function(..., hidden = dnn.params, c(500,500), activation = "RectifierWithDropout", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+h2o.dnn.4 <- function(..., hidden = c(500,200), activation = "Rectifier", epochs = 30, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation,  seed = seed)
+h2o.dnn.5 <- function(..., hidden = c(200,100,50), activation = "RectifierWithDropout", epochs = 50, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+h2o.dnn.6 <- function(..., hidden = c(50,100,50), activation = "Rectifier", epochs = 30, seed = 1)  h2o.deeplearning.wrapper(..., hidden = hidden, activation = activation, seed = seed)
+
+
+
+learner <- c("h2o.glm.wrapper", "h2o.gbm.1", "h2o.gbm.2", "h2o.gbm.3", "h2o.gbm.4", "h2o.gbm.5") #, "h2o.deeplearning.wrapper")
+metalearner <- "h2o.glm.wrapper"
+
+ens.1 <- h2o.ensemble(x = features, y = response, 
+                      training_frame = train.hex, 
+                      validation_frame = valid.hex,
+                      family = "gaussian", 
+                      learner = learner, 
+                      metalearner = metalearner)
+
+pred.train.ens.1 <- down(predict(ens.1, train.hex)$pred)
+pred.valid.ens.1 <- down(predict(ens.1, valid.hex)$pred)
+pred.test.ens.1 <- down(predict(ens.1, test.hex)$pred)
+train.df <- pred.train.ens.1$basepred
+valid.df <- pred.valid.ens.1$basepred
+test.df <- pred.test.ens.1$basepred
+
+
+t <- data.frame(p1 = pnn1, p2 = pnn2, p3 = pnn3, p4 = pnn4, p5 = pnn5, 
+                p6 = down(test.df[,1]), p7 = down(test.df[,2]),
+                p8 = down(test.df[,3]), p9 = pred.xgb, p10 = pred.gbdt)
+
+
+
+
+
+
 
 
 
@@ -312,31 +496,32 @@ xgb9 <- xgb.train(xtrain.cv, params = xgb.params,
                   print_every_n = 15)
 
 
-xtrain.cv <- xgb.DMatrix(data.matrix(alldata[f10,-1]), label = ytrain[f10])
-watch.cv <- xgb.DMatrix(data.matrix(alldata[fold10,-1]), label = ytrain[fold10])
+xtrain <- xgb.DMatrix(data.matrix(alldata[tr,-1]), label = ytrain[tr])
+xtrain.cv <- xgb.DMatrix(data.matrix(alldata[1:150000,-1]), label = ytrain[1:150000])
+watch.cv <- xgb.DMatrix(data.matrix(alldata[150001:188318,-1]), label = ytrain[150001:188318])
 
 
 xgb.params <- list(
       seed = 0,
       objective = "reg:linear",
       eta = 0.005,
-      max_depth = 10,
-      alpha = 2,
-      gamma = 3,
-      colsample_bytree = .5,
+      max_depth = 12,
+      alpha = 1,
+      gamma = 2,
+      colsample_bytree = .55,
       min_child_weight = 1,
-      subsample = .7,
+      subsample = .8,
       base_score = 7.76
 )
-xgb10 <- xgb.train(xtrain.cv, params = xgb.params,
-                  watchlist = list(val1 = watch.cv),
+xgb10 <- xgboost(data = xtrain,
+                   params = xgb.params,
                   feval = xg_eval_mae,
                   maximize = FALSE,
                   nrounds = 6000, 
-                  early_stopping_rounds = 20,
-                  print_every_n = 15)
+                  print_every_n = 10
+                  )
 
-
+# LB: 1116
 
 
 
@@ -417,8 +602,8 @@ ens <- h2o.ensemble(x = features, y = response,
                     cvControl = list(V = 5)
 )
 
-pred.train.ens <- as.numeric(unlist(as.data.frame(predict(ens, px.hex)$pred)))
-pred.test.ens <- as.numeric(unlist(as.data.frame(predict(ens, pt.hex)$pred)))
+pred.train.ens <- down(predict(ens, px.hex)$pred)))
+pred.test.ens <- down(predict(ens, pt.hex)$pred)))
 
 head(pred.test.ens)
 sample$loss <- exp(pred.test.ens)
