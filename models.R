@@ -145,7 +145,7 @@ dnn5<-h2o.deeplearning(x = features,
                        overwrite_with_best_model=T,
                        activation="Rectifier",
                        distribution="huber",
-                       hidden=c(280, 280, 280))
+                       hidden=c(140, 50, 15))
 # LB: 1165
 
 
@@ -168,8 +168,11 @@ pred.test.dnn4 <- down(predict(dnn4, test.hex[,-1]))
 pred.test.dnn5 <- down(predict(dnn5, test.hex[,-1]))
 
 
-
-
+pdnn1 <- c(pred.train.dnn1, pred.valid.dnn1, pred.test.dnn1)
+pdnn2 <- c(pred.train.dnn2, pred.valid.dnn2, pred.test.dnn2)
+pdnn3 <- c(pred.train.dnn3, pred.valid.dnn3, pred.test.dnn3)
+pdnn4 <- c(pred.train.dnn4, pred.valid.dnn4, pred.test.dnn4)
+pdnn5 <- c(pred.train.dnn5, pred.valid.dnn5, pred.test.dnn5)
 
 
 
@@ -212,19 +215,42 @@ grid <- h2o.grid(
 
 gbm.params <- list(
       ntrees = 10000,
+      nbins = 100,
       seed = 0,
       stopping_rounds = 10)
 
-h2o.gbm.1 <- function(..., params = gbm.params, max_depth = 4, rate = .2, rate_annealing = .9, sample_rate = .9, col_sample_rate = .8){ h2o.gbm.wrapper(..., params = params, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
-h2o.gbm.2 <- function(..., params = gbm.params, max_depth = 8, rate = .1, rate_annealing = .95, sample_rate = .8, col_sample_rate = .8){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
-h2o.gbm.3 <- function(..., params = gbm.params, max_depth = 12, rate = .05, rate_annealing = .98, sample_rate = .8, col_sample_rate = .8){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
-h2o.gbm.4 <- function(..., params = gbm.params, max_depth = 10, rate = .01, rate_annealing = .99, sample_rate = .8, col_sample_rate = .8){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
-h2o.gbm.5 <- function(..., params = gbm.params, max_depth = 8, rate = .005, rate_annealing = .99, sample_rate = .8, col_sample_rate = .8){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+
+h2o.glm.1 <- function(..., nfolds = 0, alpha = 0) h2o.glm.wrapper(..., nfolds = nfolds, alpha = alpha)
+h2o.glm.2 <- function(..., nfolds = 0, alpha = .2) h2o.glm.wrapper(..., nfolds = nfolds, alpha = alpha)
+h2o.glm.3 <- function(..., nfolds = 0, alpha = .8) h2o.glm.wrapper(..., nfolds = nfolds, alpha = alpha)
+h2o.glm.4 <- function(..., nfolds = 0, alpha = .4) h2o.glm.wrapper(..., nfolds = nfolds, alpha = alpha)
+h2o.glm.5 <- function(..., nfolds = 0, alpha = .6) h2o.glm.wrapper(..., nfolds = nfolds, alpha = alpha)
+h2o.glm.6 <- function(..., alpha = 0) h2o.glm.wrapper(..., alpha = alpha)
+h2o.glm.7 <- function(..., alpha = .5) h2o.glm.wrapper(..., alpha = alpha)
+h2o.glm.8 <- function(..., alpha = 1) h2o.glm.wrapper(..., alpha = alpha)
+h2o.glm.9 <- function(..., alpha = .3) h2o.glm.wrapper(..., alpha = alpha)
+h2o.glm.10 <- function(..., alpha = .7) h2o.glm.wrapper(..., alpha = alpha)
+
+h2o.gbm.1 <- function(..., params = gbm.params, nfolds = 0, max_depth = 14, rate = .15, rate_annealing = .95, sample_rate = .9, col_sample_rate = .8){ h2o.gbm.wrapper(..., params = params, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth, nfolds = nfolds)}
+h2o.gbm.2 <- function(..., params = gbm.params, nfolds = 0, max_depth = 14, rate = .05, rate_annealing = .99, sample_rate = .8, col_sample_rate = .8){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth, nfolds = nfolds)}
+h2o.gbm.3 <- function(..., params = gbm.params, nfolds = 0, max_depth = 12, rate = .05, rate_annealing = .98, sample_rate = .8, col_sample_rate = .5){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth, nfolds = nfolds)}
+h2o.gbm.4 <- function(..., params = gbm.params, nfolds = 0, max_depth = 10, rate = .01, rate_annealing = .99, sample_rate = .8, col_sample_rate = .6){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth, nfolds = nfolds)}
+h2o.gbm.5 <- function(..., params = gbm.params, nfolds = 0, max_depth = 8, rate = .005, rate_annealing = .99, sample_rate = .8, col_sample_rate = .8){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth, nfolds = nfolds)}
+h2o.gbm.6 <- function(..., params = gbm.params, nfolds = 0, max_depth = 10, rate = .005, rate_annealing = .99, sample_rate = .8, col_sample_rate = .8){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth, nfolds = nfolds)}
+h2o.gbm.7 <- function(..., params = gbm.params, max_depth = 12, rate = .001, rate_annealing = .99, sample_rate = .8, col_sample_rate = .6){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+h2o.gbm.8 <- function(..., params = gbm.params, max_depth = 14, rate = .001, rate_annealing = .99, sample_rate = .8, col_sample_rate = .6){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+h2o.gbm.9 <- function(..., params = gbm.params, max_depth = 12, rate = .005, rate_annealing = .99, sample_rate = .8, col_sample_rate = .5){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+h2o.gbm.10 <- function(..., params = gbm.params, max_depth = 10, rate = .005, rate_annealing = .99, sample_rate = .8, col_sample_rate = .5){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+h2o.gbm.11 <- function(..., params = gbm.params, max_depth = 10, rate = .005, rate_annealing = .99, sample_rate = .8, col_sample_rate = .5){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+h2o.gbm.12 <- function(..., params = gbm.params, max_depth = 14, rate = .001, rate_annealing = .99, sample_rate = .8, col_sample_rate = .6){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+h2o.gbm.13 <- function(..., params = gbm.params, max_depth = 10, rate = .005, rate_annealing = .98, sample_rate = .8, col_sample_rate = .5){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+h2o.gbm.14 <- function(..., params = gbm.params, max_depth = 8, rate = .001, rate_annealing = .99, sample_rate = .8, col_sample_rate = .6){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
+h2o.gbm.15 <- function(..., params = gbm.params, max_depth = 12, rate = .005, rate_annealing = .98, sample_rate = .8, col_sample_rate = .5){h2o.gbm.wrapper(..., rate = rate, rate_annealing = rate_annealing, sample_rate = sample_rate, col_sample_rate = col_sample_rate, max_depth = max_depth)}
 
 dnn.params <- list(
       overwrite_with_best_model = TRUE,
       stopping_rounds = 10,
-      stopping_metric = MSE,
+      stopping_metric = "MSE",
       distribution = "huber"
 )
 
@@ -237,9 +263,15 @@ h2o.dnn.6 <- function(..., params = dnn.params, hidden = c(50,100,50), activatio
 
 
 
-learner <- c("h2o.glm.wrapper", "h2o.gbm.1", "h2o.gbm.2", "h2o.gbm.3", "h2o.gbm.4", "h2o.gbm.5",
-             "h2o.deeplearning.wrapper", "h2o.dnn.1", "h2o.dnn.2", "h2o.dnn.3", "h2o.dnn.4",
-             "h2o.dnn.5", "h2o.dnn.6")
+
+
+learner <- c("h2o.glm.wrapper", "h2o.glm.1", "h2o.glm.2", "h2o.glm.3", "h2o.glm.4", "h2o.glm.5",
+             "h2o.glm.6", "h2o.glm.7", "h2o.glm.8", "h2o.glm.9", "h2o.glm.10",
+             "h2o.gbm.1", "h2o.gbm.2", "h2o.gbm.3", "h2o.gbm.4", "h2o.gbm.5",
+             "h2o.gbm.6", "h2o.gbm.7", "h2o.gbm.8", "h2o.gbm.9", "h2o.gbm.10",
+             "h2o.gbm.11", "h2o.gbm.12", "h2o.gbm.13", "h2o.gbm.14", "h2o.gbm.15")
+             # "h2o.deeplearning.wrapper", "h2o.dnn.1", "h2o.dnn.2", "h2o.dnn.3", "h2o.dnn.4",
+             # "h2o.dnn.5", "h2o.dnn.6")
 metalearner <- "h2o.glm.wrapper"
 
 ens.1 <- h2o.ensemble(x = features, y = response, 
@@ -249,31 +281,41 @@ ens.1 <- h2o.ensemble(x = features, y = response,
                       learner = learner, 
                       metalearner = metalearner)
 
-pred.train.ens.1 <- predict(ens.1, train.hex)$pred
-pred.valid.ens.1 <- predict(ens.1, valid.hex)$pred
-pred.test.ens.1 <- predict(ens.1, test.hex)$pred
+pred.train.ens.1 <- predict(ens.1, train.hex)
+pred.valid.ens.1 <- predict(ens.1, valid.hex)
+pred.test.ens.1 <- predict(ens.1, test.hex)
 train.df <- pred.train.ens.1$basepred
 valid.df <- pred.valid.ens.1$basepred
 test.df <- pred.test.ens.1$basepred
 
 
+      
+down.df <- function(ens.df) {
+      
+      e.df <<- data.frame(h2o.glm.wrapper = down(ens.df[,1]))
 
-
-val.df <- data.frame(h2o.glm.wrapper = down(valid.df[,1]))
-
-for (i in 2:ncol(valid.df)) {
-      val.df <- cbind(val.df, down(valid.df[,i]))
+      for (i in 2:ncol(ens.df)) {
+            e.df <<- cbind(e.df, down(ens.df[,i]))
+      }
+      names(e.df) <- names(ens.df)
+      e.df
 }
-names(val.df) <- names(valid.df)
-val.df <- cbind(loss = down(valid.hex$loss), val.df)
 
-val.df <- cbind(val.df, 
-                dnn1 = pred.valid.dnn1, 
-                dnn2 = pred.valid.dnn2, 
-                dnn3 = pred.valid.dnn3, 
-                dnn4 = pred.valid.dnn4, 
-                dnn5 = pred.valid.dnn5, 
-                xgb1 = pred.valid.xgb)
+
+tr.df <- down.df(train.df)
+va.df <- down.df(valid.df)
+te.df <- down.df(test.df)
+
+preds.df <- rbind(tr.df, va.df, te.df)
+
+
+preds.df <- cbind(preds.df, 
+                dnn1 = pdnn1, 
+                dnn2 = pdnn2, 
+                dnn3 = pdnn3, 
+                dnn4 = pdnn4, 
+                dnn5 = pdnn5)
+      
 # mae(exp(down(valid.hex$loss)), exp(val.df[,2]))
 # [1] 1208.383
 # > mae(exp(down(valid.hex$loss)), exp(val.df[,3]))
@@ -336,29 +378,6 @@ t.df <- cbind(t.df,
 
 
 
-xgb.f <- xgb.train(data = xgb.DMatrix(data.matrix(val.df[1:8000,-1]), label = down(valid.hex$loss[1:8000])),
-                   watchlist = list(val = xgb.DMatrix(data.matrix(val.df[8001:8318,-1]), 
-                                                      label = down(valid.hex$loss[8001:8318]))),
-                   nrounds = 1000,  
-                   feval = xg_eval_mae,
-                   maximize = FALSE,
-                   early_stopping_rounds = 10)
-
-
-val.df.hex <- as.h2o(val.df)
-
-val.train.hex <- val.df.hex[1:8000,]
-val.val.hex <- val.df.hex[8001:8318,]
-
-dnn.f <- h2o.deeplearning(y=1, x=2:ncol(val.df), training_frame = val.train.hex,
-                          validation_frame = val.val.hex,
-                          epochs = 50, 
-                          overwrite_with_best_model = TRUE,
-                          stopping_rounds = 10,
-                          hidden = c(200,200,200,200))
-
-
-
 adj <- function(arg, lambda){
       
       arg <- (arg - 7.79)*lambda + 7.79
@@ -367,45 +386,132 @@ adj <- function(arg, lambda){
 
 
 mae(exp(down(val.val.hex$loss)), exp(down(predict(dnn.f, val.val.hex[,-1]))))
-mae(exp(down(val.val.hex$loss)), exp(adj(down(predict(dnn.f, val.val.hex[,-1])), 1.02)))
-mae(exp(down(val.val.hex$loss)), exp(adj(down(predict(dnn.f, val.val.hex[,-1])), 1.03)))
-mae(exp(down(val.val.hex$loss)), exp(adj(down(predict(dnn.f, val.val.hex[,-1])), 1.04)))
-mae(exp(down(val.val.hex$loss)), exp(adj(down(predict(dnn.f, val.val.hex[,-1])), 1.05)))
-mae(exp(down(val.val.hex$loss)), exp(adj(down(predict(dnn.f, val.val.hex[,-1])), 1.06)))
-mae(exp(down(val.val.hex$loss)), exp(adj(down(predict(dnn.f, val.val.hex[,-1])), 1.07)))
 
 
 
+ytrain <- data.matrix(alldata[tr,1])
+xtrain.cv <- xgb.DMatrix(data.matrix(alldata[tr[-fold11],-1]), label = ytrain[-fold11])
+watch.cv <- xgb.DMatrix(data.matrix(alldata[tr[fold11],-1]), label = ytrain[fold11])
+
+xgb.f1 <- xgb.train(data = xtrain.cv, watchlist = list(val = watch.cv),
+                    subsample = 0.7, 
+                    max_depth = 12,
+                    colsample_bytree = 0.7,
+                    eta = 0.03,
+                    min_child_weight = 100,
+                    verbose = 1,
+                    feval = xg_eval_mae,
+                    maximize = FALSE,
+                    base_score = 7.79,
+                    nrounds = 400,
+                    early_stopping_rounds = 10,
+                    print_every_n = 10)
+
+# 1126.13   393
+
+xgb.f2 <- xgb.train(data = xtrain.cv, watchlist = list(val = watch.cv),
+                    subsample = .8,
+                    colsample_bytree = .5,
+                    max_depth = 12,
+                    alpha = 1,
+                    gamma = 2,
+                    eta = .01,
+                    min_child_weight = 1,
+                    verbose = 1,
+                    feval = xg_eval_mae,
+                    maximize = FALSE,
+                    base_score = 7.79,
+                    nrounds = 1600,
+                    early_stopping_rounds = 10,
+                    print_every_n = 10)
+# 1123.331    1593
+
+
+xgb.f3 <- xgb.train(data = xtrain.cv, watchlist = list(val = watch.cv),
+                    subsample = .7,
+                    colsample_bytree = .5,
+                    max_depth = 14,
+                    alpha = 1,
+                    gamma = 3,
+                    eta = .01,
+                    min_child_weight = 10,
+                    verbose = 1,
+                    feval = xg_eval_mae,
+                    maximize = FALSE,
+                    base_score = 7.79,
+                    nrounds = 1800,
+                    early_stopping_rounds = 10,
+                    print_every_n = 10)
+
+# 1124.808    1743
 
 
 
+xgb.f4 <- xgb.train(data = xtrain.cv, watchlist = list(val = watch.cv),
+                    subsample = .7,
+                    colsample_bytree = .5,
+                    max_depth = 8,
+                    alpha = 1,
+                    gamma = 2,
+                    eta = .04,
+                    min_child_weight = 2,
+                    verbose = 1,
+                    feval = xg_eval_mae,
+                    maximize = FALSE,
+                    base_score = 7.79,
+                    nrounds = 2000,
+                    early_stopping_rounds = 10,
+                    print_every_n = 10)
+
+# 1126.082    644
+
+
+xgb.f5 <- xgb.train(data = xtrain.cv, watchlist = list(val = watch.cv),
+                    subsample = .9,
+                    colsample_bytree = .8,
+                    max_depth = 10,
+                    alpha = 1,
+                    gamma = 5,
+                    eta = .05,
+                    min_child_weight = 30,
+                    verbose = 1,
+                    feval = xg_eval_mae,
+                    maximize = FALSE,
+                    base_score = 7.79,
+                    nrounds = 2000,
+                    early_stopping_rounds = 10,
+                    print_every_n = 10)
+
+# 1134.426   405
 
 
 
+pred.train.xgb.1 <- predict(xgb.f1, xtrain.cv)
+pred.train.xgb.2 <- predict(xgb.f2, xtrain.cv)
+pred.train.xgb.3 <- predict(xgb.f3, xtrain.cv)
+pred.train.xgb.4 <- predict(xgb.f4, xtrain.cv)
+pred.train.xgb.5 <- predict(xgb.f5, xtrain.cv)
+
+pred.val.xgb.1 <- predict(xgb.f1, watch.cv)
+pred.val.xgb.2 <- predict(xgb.f2, watch.cv)
+pred.val.xgb.3 <- predict(xgb.f3, watch.cv)
+pred.val.xgb.4 <- predict(xgb.f4, watch.cv)
+pred.val.xgb.5 <- predict(xgb.f5, watch.cv)
+
+pred.test.xgb.1 <- predict(xgb.f1, xtest)
+pred.test.xgb.2 <- predict(xgb.f2, xtest)
+pred.test.xgb.3 <- predict(xgb.f3, xtest)
+pred.test.xgb.4 <- predict(xgb.f4, xtest)
+pred.test.xgb.5 <- predict(xgb.f5, xtest)
 
 
+pxgb1 <- c(pred.train.xgb.1, pred.val.xgb.1, pred.test.xgb.1)
+pxgb2 <- c(pred.train.xgb.2, pred.val.xgb.2, pred.test.xgb.2)
+pxgb3 <- c(pred.train.xgb.3, pred.val.xgb.3, pred.test.xgb.3)
+pxgb4 <- c(pred.train.xgb.4, pred.val.xgb.4, pred.test.xgb.4)
+pxgb5 <- c(pred.train.xgb.5, pred.val.xgb.5, pred.test.xgb.5)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+preds.df <- cbind(preds.df, xgb1 = pxgb1, xgb2 = pxgb2, xgb3 = pxgb3, xgb4 = pxgb4, xgb5 = pxgb5)
 
 
 
